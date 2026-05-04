@@ -50,4 +50,4 @@ MindPalace/
 
 ## ⚖️ 开源协议
 
-本项目采用  (LICENSE) 协议授权 。
+本项目采用 MIT LICENSE 协议授权 。
