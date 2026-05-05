@@ -78,6 +78,9 @@ CMakeLists.txt.user   # 忽略用户本地的 CMake 配置
 /build/               # 忽略通用的构建目录
 .qt/                  # 忽略 Qt 的临时元数据
 /bin/                 # 如果你设置了输出路径，忽略二进制输出
+
+# 本机专用配置（例如 Qt 安装路径），不要提交到仓库
+cmake/LocalConfig.cmake
 /lib/                 # 忽略生成的库文件
 
 # === 操作系统临时文件 ===
