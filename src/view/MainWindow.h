@@ -30,6 +30,9 @@ private:
     void setupRightPanel();
     void setupStyles();
 
+private slots:
+    void showNextFlashCard();
+
 private:
     // ===== 左侧导航面板 =====
     QWidget *leftPanel{};
@@ -40,6 +43,8 @@ private:
     QWidget *centerPanel{};
     QQuickWidget *flashCardView{};
     QPushButton *feedbackBtns[4]{};  // 生疏、困难、良好、简单
+    int currentFlashCardIndex{0};
+    int flashCardCount{0};
 
     // ===== 右侧统计面板 =====
     QWidget *rightPanel{};

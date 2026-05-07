@@ -18,6 +18,13 @@
 #include <QQuickWidget>
 #include <QQuickItem>
 #include <QUrl>
+#include <QMetaObject>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVariant>
+#include <QQmlContext>
+
 
 namespace {
 
@@ -187,13 +194,66 @@ void MainWindow::setupCenterPanel() {
     flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
     flashCardView->setClearColor(Qt::transparent);
     flashCardView->setMinimumHeight(420);
-    flashCardView->setSource(QUrl(QStringLiteral("qrc:/styles/HoloFlashCard.qml")));
+    QJsonArray cards;
+
+    auto appendCard = [&cards](const QString &front, const QString &back) {
+        QJsonObject card;
+        card.insert(QStringLiteral("front"), front);
+        card.insert(QStringLiteral("back"), back);
+        cards.append(card);
+    };
+
+    appendCard(
+            tr("C++ RAII 是什么？"),
+            tr("Resource Acquisition Is Initialization：把资源生命周期绑定到对象生命周期，构造获取，析构释放。")
+    );
+
+    appendCard(
+            tr("SM-2 算法中的 EF 代表什么？"),
+            tr("Easiness Factor，表示卡片对学习者的难易权重，会影响下一次复习间隔。")
+    );
+
+    appendCard(
+            tr("Qt 信号槽适合解决什么问题？"),
+            tr("用于对象之间的松耦合通信，发送方不需要知道接收方的具体实现。")
+    );
+
+    appendCard(
+            tr("被动视图 Passive View 的核心思想是什么？"),
+            tr("View 只负责展示与上报事件，业务状态和流程由 Controller / Presenter 管理。")
+    );
+
+    flashCardCount = cards.size();
+    currentFlashCardIndex = 0;
+
+    const QString cardsJson = QString::fromUtf8(
+            QJsonDocument(cards).toJson(QJsonDocument::Compact)
+    );
+
+    qWarning() << "C++ cardsJson =" << cardsJson;
+
+    flashCardView->rootContext()->setContextProperty(QStringLiteral("cardsJson"), cardsJson);
+    flashCardView->setSource(QUrl(QStringLiteral("qrc:/styles/FlashCardStack.qml")));
 
     if (auto *root = flashCardView->rootObject()) {
-        root->setProperty("frontText", tr("正面\n\n点击卡片查看答案"));
-        root->setProperty("backText", tr("反面\n\n这里显示答案、解释或例句"));
+        qWarning() << "QML root loaded:" << root << root->metaObject()->className();
+
+        // 把 cardsJson 写入 QML 内部属性，并主动触发一次 reload。
+        // 注意：QML 里不能声明和 context property 同名的属性，否则会遮蔽 context property。
+        root->setProperty("cardsJsonInternal", cardsJson);
+        QMetaObject::invokeMethod(root, "loadCardsFromJson", Qt::DirectConnection);
+
+        root->setProperty("currentIndex", currentFlashCardIndex);
+        root->setProperty("requestedIndex", currentFlashCardIndex);
+        root->setProperty("nextRequest", 0);
         root->setProperty("flipped", false);
+
+        qWarning() << "cardCount after load =" << root->property("cardCount").toInt();
+    } else {
+        qWarning() << "FlashCardStack rootObject is null";
     }
+
+
 
     centerLayout->addWidget(flashCardView, 1);
 
@@ -219,11 +279,46 @@ void MainWindow::setupCenterPanel() {
         feedbackBtns[i]->setProperty("variant", variants[i]);
         feedbackBtns[i]->setMinimumHeight(62);
         setButtonFont(feedbackBtns[i], 11);
+
+        connect(feedbackBtns[i], &QPushButton::clicked,
+                this, &MainWindow::showNextFlashCard);
+
         feedbackLayout->addWidget(feedbackBtns[i]);
     }
 
+
     centerLayout->addLayout(feedbackLayout);
 }
+
+void MainWindow::showNextFlashCard() {
+    if (!flashCardView) {
+        return;
+    }
+
+    QObject *root = flashCardView->rootObject();
+    if (!root) {
+        qWarning() << "Flash card QML root object is null.";
+        return;
+    }
+
+    if (root->property("switching").toBool()) {
+        return;
+    }
+
+    const int currentIndex = root->property("currentIndex").toInt();
+    const int cardCount = root->property("cardCount").toInt();
+
+//    if (cardCount <= 1) {
+//        qWarning() << "Card count is too small:" << cardCount;
+//        return;
+//    }
+
+    const int nextIndex = currentIndex + 1;
+    qWarning() << "Switch flash card:" << currentIndex << "->" << nextIndex;
+
+    root->setProperty("requestedIndex", nextIndex);
+}
+
 
 
 void MainWindow::setupRightPanel() {

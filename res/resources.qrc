@@ -6,6 +6,7 @@
         <file>styles/MainWindow.qss</file>
         <!-- Qt Quick 闪卡 -->
         <file>styles/HoloFlashCard.qml</file>
+        <file>styles/FlashCardStack.qml</file>
     </qresource>
 </RCC>
 

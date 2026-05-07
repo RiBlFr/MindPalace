@@ -363,8 +363,12 @@ Item {
                 localY <= card.height
 
             if (insideCard) {
-                root.flipped = !root.flipped
-                root.cardClicked(root.flipped)
+                // IMPORTANT:
+                // Do NOT mutate root.flipped here.
+                // The parent (FlashCardStack) is the single source of truth for flip state.
+                // Mutating here can race with card-switching and cause the next card to start
+                // on the wrong side.
+                root.cardClicked(!root.flipped)
             }
         }
     }
