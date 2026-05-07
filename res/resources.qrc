@@ -2,6 +2,10 @@
     <qresource prefix="/">
         <!-- 应用图标 -->
         <file>icons/app_icon.png</file>
+        <!-- Stylesheets -->
+        <file>styles/MainWindow.qss</file>
+        <!-- Qt Quick 闪卡 -->
+        <file>styles/HoloFlashCard.qml</file>
     </qresource>
 </RCC>
 

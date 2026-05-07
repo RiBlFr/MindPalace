@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <QApplication>
+#include <QFile>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
 #include <QHBoxLayout>
@@ -14,6 +15,9 @@
 #include <QPushButton>
 #include <QScreen>
 #include <QVBoxLayout>
+#include <QQuickWidget>
+#include <QQuickItem>
+#include <QUrl>
 
 namespace {
 
@@ -179,32 +183,19 @@ void MainWindow::setupCenterPanel() {
     centerLayout->setContentsMargins(24, 24, 24, 24);
     centerLayout->setSpacing(18);
 
-    cardFrame = new QFrame;
-    markSurface(cardFrame);
-    cardFrame->setMinimumHeight(360);
+    flashCardView = new QQuickWidget(centerPanel);
+    flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    flashCardView->setClearColor(Qt::transparent);
+    flashCardView->setMinimumHeight(420);
+    flashCardView->setSource(QUrl(QStringLiteral("qrc:/styles/HoloFlashCard.qml")));
 
-    auto *cardLayout = new QVBoxLayout(cardFrame);
-    cardLayout->setContentsMargins(36, 36, 36, 36);
-    cardLayout->setSpacing(20);
+    if (auto *root = flashCardView->rootObject()) {
+        root->setProperty("frontText", tr("正面\n\n点击卡片查看答案"));
+        root->setProperty("backText", tr("反面\n\n这里显示答案、解释或例句"));
+        root->setProperty("flipped", false);
+    }
 
-    cardFrontLabel = new QLabel(tr("正面\n\n点击卡片查看答案"));
-    cardFrontLabel->setAlignment(Qt::AlignCenter);
-    cardFrontLabel->setWordWrap(true);
-    cardFrontLabel->setMinimumHeight(280);
-    cardFrontLabel->setCursor(Qt::PointingHandCursor);
-    setLabelStyle(cardFrontLabel, 26, QFont::Bold, Theme::Text);
-
-    cardLayout->addWidget(cardFrontLabel, 1);
-
-    cardBackLabel = new QLabel(tr("反面\n\n隐藏中..."));
-    cardBackLabel->setAlignment(Qt::AlignCenter);
-    cardBackLabel->setWordWrap(true);
-    setLabelStyle(cardBackLabel, 23, QFont::Bold, Theme::Success);
-    cardBackLabel->hide();
-
-    cardLayout->addWidget(cardBackLabel, 1);
-
-    centerLayout->addWidget(cardFrame, 1);
+    centerLayout->addWidget(flashCardView, 1);
 
     auto *feedbackLayout = new QHBoxLayout;
     feedbackLayout->setSpacing(12);
@@ -228,12 +219,12 @@ void MainWindow::setupCenterPanel() {
         feedbackBtns[i]->setProperty("variant", variants[i]);
         feedbackBtns[i]->setMinimumHeight(62);
         setButtonFont(feedbackBtns[i], 11);
-
         feedbackLayout->addWidget(feedbackBtns[i]);
     }
 
     centerLayout->addLayout(feedbackLayout);
 }
+
 
 void MainWindow::setupRightPanel() {
     rightPanel = new QWidget;
@@ -319,152 +310,11 @@ void MainWindow::setupRightPanel() {
 void MainWindow::setupStyles() {
     setBackground(this, Theme::WindowBg);
 
-    setStyleSheet(R"(
-        QMainWindow {
-            background: #f7f8fb;
-        }
+    QFile qssFile(":/styles/MainWindow.qss");
+    if (!qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "Failed to load QSS resource" << qssFile.fileName() << qssFile.errorString();
+        return;
+    }
 
-        QMenuBar {
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 2px;
-        }
-
-        QMenuBar::item {
-            padding: 6px 10px;
-            border-radius: 6px;
-            color: #1f2937;
-        }
-
-        QMenuBar::item:selected {
-            background: #eef2ff;
-            color: #2563eb;
-        }
-
-        QMenu {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 6px;
-        }
-
-        QMenu::item {
-            padding: 7px 28px 7px 18px;
-            border-radius: 6px;
-            color: #1f2937;
-        }
-
-        QMenu::item:selected {
-            background: #eff6ff;
-            color: #2563eb;
-        }
-
-        QWidget[panel="side"] {
-            background: #f3f6fa;
-        }
-
-        QFrame[role="surface"] {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-        }
-
-        QListWidget#deckList {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 6px;
-            outline: none;
-        }
-
-        QListWidget#deckList::item {
-            padding: 10px 12px;
-            margin: 2px;
-            border-radius: 8px;
-            color: #334155;
-        }
-
-        QListWidget#deckList::item:hover {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        QListWidget#deckList::item:selected {
-            background: #2563eb;
-            color: #ffffff;
-        }
-
-        QPushButton {
-            min-height: 34px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-
-        QPushButton[variant="primary"] {
-            background: #2563eb;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="primary"]:hover {
-            background: #1d4ed8;
-        }
-
-        QPushButton[variant="danger"] {
-            background: #ef4444;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="danger"]:hover {
-            background: #dc2626;
-        }
-
-        QPushButton[variant="warning"] {
-            background: #f97316;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="warning"]:hover {
-            background: #ea580c;
-        }
-
-        QPushButton[variant="normal"] {
-            background: #f59e0b;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="normal"]:hover {
-            background: #d97706;
-        }
-
-        QPushButton[variant="success"] {
-            background: #16a34a;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="success"]:hover {
-            background: #15803d;
-        }
-
-        QPushButton:pressed {
-            padding-top: 10px;
-            padding-bottom: 6px;
-        }
-
-        QProgressBar#dailyProgress {
-            height: 18px;
-            border: none;
-            border-radius: 9px;
-            background: #e5e7eb;
-            text-align: center;
-            color: #334155;
-            font-size: 11px;
-        }
-
-        QProgressBar#dailyProgress::chunk {
-            border-radius: 9px;
-            background: #2563eb;
-        }
-    )");
+    setStyleSheet(QString::fromUtf8(qssFile.readAll()));
 }

@@ -9,7 +9,7 @@ class QLabel;
 class QPushButton;
 class QProgressBar;
 class QFrame;
-
+class QQuickWidget;
 /**
  * @class MainWindow
  * @brief 记忆殿堂主窗口
@@ -38,9 +38,7 @@ private:
 
     // ===== 中央看板区 =====
     QWidget *centerPanel{};
-    QFrame *cardFrame{};
-    QLabel *cardFrontLabel{};
-    QLabel *cardBackLabel{};
+    QQuickWidget *flashCardView{};
     QPushButton *feedbackBtns[4]{};  // 生疏、困难、良好、简单
 
     // ===== 右侧统计面板 =====
