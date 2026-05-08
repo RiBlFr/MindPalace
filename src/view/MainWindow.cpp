@@ -261,10 +261,10 @@ void MainWindow::setupCenterPanel() {
     feedbackLayout->setSpacing(12);
 
     const QStringList feedbackTexts = {
-            tr("生疏\n(F1)"),
+            tr("忘记\n(F1)"),
             tr("困难\n(F2)"),
-            tr("良好\n(F3)"),
-            tr("简单\n(F4)")
+            tr("普通\n(F3)"),
+            tr("熟悉\n(F4)")
     };
 
     const QStringList variants = {

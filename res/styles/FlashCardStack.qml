@@ -2,8 +2,20 @@ import QtQuick
 
 Item {
     id: root
+    
+    readonly property real minSide: Math.max(1, Math.min(width, height))
+    readonly property real stackPad: Math.max(10, Math.min(70, minSide * 0.12))
+    readonly property real depthScaleBase: Math.max(0.78, Math.min(0.88, 0.84 * (minSide / 520)))
+    readonly property real nextScaleBase: Math.max(0.86, Math.min(0.95, 0.91 * (minSide / 520)))
+    readonly property real showBackCardThreshold: 260
+    readonly property real backCardShiftX: root.stackPad * 1.05
+    readonly property real backCardShiftY: root.stackPad * 0.80
+    readonly property real backCardBodyOffsetX: root.stackPad * 0.90
+    readonly property real backCardBodyOffsetY: root.stackPad * 0.70
 
-    // keep an internal property and bind it to the context property if it exists.
+    readonly property real nextScaleMin: root.nextScaleBase - 0.03
+    readonly property real maxRotation: Math.min(2.5, root.stackPad * 0.045)
+
     property string cardsJsonInternal: ""
 
     Binding {
@@ -20,7 +32,8 @@ Item {
 
     property bool flipped: false
     property bool switching: false
-    property real switchProgress: 0
+    property real switchPhase: 0
+    property real bgFadeInPhase: 1.0
     property bool flipInputEnabled: true
 
     readonly property int cardCount: cardsModel.count
@@ -62,8 +75,8 @@ Item {
 
             for (let i = 0; i < parsed.length; ++i) {
                 cardsModel.append({
-                    "front": parsed[i].front ? parsed[i].front : "",
-                    "back": parsed[i].back ? parsed[i].back : ""
+                    "front": parsed[i].front || "",
+                    "back": parsed[i].back || ""
                 })
             }
 
@@ -73,7 +86,7 @@ Item {
             nextRequest = 0
             flipped = false
             switching = false
-            switchProgress = 0
+            switchPhase = 0
 
             console.log("FlashCardStack loaded cardsModel:", cardsModel.count)
             console.log("FlashCardStack cardCount:", cardCount)
@@ -162,16 +175,17 @@ Item {
         flipInputEnabled = false
 
         switching = true
-        switchProgress = 0
+        switchPhase = 0
+        bgFadeInPhase = 0.0
         drawNextCard.restart()
     }
 
     SequentialAnimation {
         id: drawNextCard
-
+        
         NumberAnimation {
             target: root
-            property: "switchProgress"
+            property: "switchPhase"
             from: 0
             to: 1
             duration: 560
@@ -181,14 +195,23 @@ Item {
         ScriptAction {
             script: {
                 root.currentIndex = root.pendingIndex
-                root.switchProgress = 0
-                root.switching = false
                 root.flipped = false
+                root.switching = false
                 root.flipInputEnabled = true
-                root.cardChanged(root.currentIndex, root.cardCount)
+                root.switchPhase = 0
 
-                console.log("card changed to", root.currentIndex)
+                root.cardChanged(root.currentIndex, root.cardCount)
+                console.log("switch finished")
             }
+        }
+
+        NumberAnimation {
+            target: root
+            property: "bgFadeInPhase"
+            from: 0.0
+            to: 1.0
+            duration: 250
+            easing.type: Easing.OutQuad
         }
     }
 
@@ -202,41 +225,19 @@ Item {
         anchors.fill: parent
 
         Item {
-            id: depthWrapper
-
-            width: parent.width
-            height: parent.height
-
-            x: 70
-            y: 54
-            scale: 0.84
-            rotation: 4
-            opacity: root.cardCount > 2 ? 0.25 : 0
-            z: 0
-            enabled: false
-
-            HoloFlashCard {
-                anchors.fill: parent
-                frontText: root.frontAt(root.currentIndex + 2)
-                backText: root.backAt(root.currentIndex + 2)
-                flipped: false
-            }
-        }
-
-        Item {
             id: nextWrapper
 
             width: parent.width
             height: parent.height
-
-            x: 46 * (1 - root.switchProgress)
-            y: 34 * (1 - root.switchProgress)
-            scale: 0.91 + root.switchProgress * 0.09
-            rotation: -3 + root.switchProgress * 3
-            opacity: root.switching && root.cardCount > 1
-                ? 0.50 + root.switchProgress * 0.50
+            anchors.centerIn: parent
+            x: root.backCardShiftX * (1 - root.switchPhase)
+            y: root.backCardShiftY * (1 - root.switchPhase)
+            scale: root.nextScaleMin + root.switchPhase * (1.0 - root.nextScaleMin)
+            rotation: -root.maxRotation + root.switchPhase * root.maxRotation
+            opacity: (root.cardCount > 1 && root.minSide >= root.showBackCardThreshold)
+                ? (root.switching ? (0.55 + root.switchPhase * 0.45) : (0.35 * root.bgFadeInPhase))
                 : 0.0
-            z: root.switchProgress > 0.58 ? 4 : 1
+            z: 1
             enabled: false
 
             HoloFlashCard {
@@ -244,6 +245,8 @@ Item {
                 frontText: root.frontAt(root.nextIndex)
                 backText: root.backAt(root.nextIndex)
                 flipped: false
+                bodyOffsetX: root.backCardBodyOffsetX * (1 - root.switchPhase)
+                bodyOffsetY: root.backCardBodyOffsetY * (1 - root.switchPhase)
             }
         }
 
@@ -252,12 +255,12 @@ Item {
 
             width: parent.width
             height: parent.height
-
-            x: -150 * root.switchProgress
-            y: -18 * root.switchProgress
-            scale: 1.0 - root.switchProgress * 0.06
-            rotation: -10 * root.switchProgress
-            opacity: 1.0 - root.switchProgress
+            anchors.centerIn: parent
+            x: root.backCardShiftX * root.switchPhase
+            y: root.backCardShiftY * root.switchPhase
+            scale: 1.0 - root.switchPhase * (1.0 - root.nextScaleMin)
+            rotation: -root.maxRotation * root.switchPhase
+            opacity: 1.0 - root.switchPhase
             z: 3
             enabled: !root.switching
 
@@ -268,6 +271,9 @@ Item {
                 frontText: root.frontAt(root.currentIndex)
                 backText: root.backAt(root.currentIndex)
                 flipped: root.flipped
+
+                bodyOffsetX: root.backCardBodyOffsetX * root.switchPhase
+                bodyOffsetY: root.backCardBodyOffsetY * root.switchPhase
 
                 onCardClicked: function(isFlipped) {
                     if (!root.flipInputEnabled || root.switching)

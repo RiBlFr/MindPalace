@@ -14,6 +14,9 @@ Item {
     property real shineY: 0.35
     property bool hovered: false
 
+    property real bodyOffsetX: 0
+    property real bodyOffsetY: 0
+
     signal cardClicked(bool flipped)
 
     Rectangle {
@@ -26,7 +29,8 @@ Item {
         width: Math.min(760, Math.max(220, parent.width - 48))
         height: Math.min(460, Math.max(180, parent.height - 48))
 
-        anchors.centerIn: parent
+        x: (parent.width - width) / 2 + root.bodyOffsetX
+        y: (parent.height - height) / 2 + root.bodyOffsetY
 
         property real flipAngle: root.flipped ? 180 : 0
 
@@ -84,9 +88,9 @@ Item {
             clip: true
 
             gradient: Gradient {
-                GradientStop { position: 0.00; color: "#5b8cff" }
-                GradientStop { position: 0.48; color: "#8b5cf6" }
-                GradientStop { position: 1.00; color: "#ec4899" }
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.00; color: "#1A2980" }
+                GradientStop { position: 1.00; color: "#26D0CE" }
             }
 
             Repeater {
