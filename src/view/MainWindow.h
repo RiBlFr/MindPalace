@@ -9,7 +9,7 @@ class QLabel;
 class QPushButton;
 class QProgressBar;
 class QFrame;
-
+class QQuickWidget;
 /**
  * @class MainWindow
  * @brief 记忆殿堂主窗口
@@ -30,6 +30,12 @@ private:
     void setupRightPanel();
     void setupStyles();
 
+    void initFlashCardView();
+    class QHBoxLayout* setupFeedbackButtons();
+
+private slots:
+    void showNextFlashCard();
+
 private:
     // ===== 左侧导航面板 =====
     QWidget *leftPanel{};
@@ -38,10 +44,10 @@ private:
 
     // ===== 中央看板区 =====
     QWidget *centerPanel{};
-    QFrame *cardFrame{};
-    QLabel *cardFrontLabel{};
-    QLabel *cardBackLabel{};
+    QQuickWidget *flashCardView{};
     QPushButton *feedbackBtns[4]{};  // 生疏、困难、良好、简单
+    int currentFlashCardIndex{0};
+    int flashCardCount{0};
 
     // ===== 右侧统计面板 =====
     QWidget *rightPanel{};

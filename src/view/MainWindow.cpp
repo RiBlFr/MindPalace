@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 
 #include <QApplication>
+#include <QFile>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
 #include <QHBoxLayout>
@@ -14,73 +15,19 @@
 #include <QPushButton>
 #include <QScreen>
 #include <QVBoxLayout>
+#include <QQuickWidget>
+#include <QQuickItem>
+#include <QUrl>
+#include <QMetaObject>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QVariant>
+#include <QQmlContext>
 
-namespace {
+#include "StyleUtils.h"
 
-    namespace Theme {
-        const QColor WindowBg(0xf7f8fb);
-        const QColor SideBg(0xf3f6fa);
-        const QColor Surface(0xffffff);
 
-        const QColor Text(0x1f2937);
-        const QColor MutedText(0x64748b);
-
-        const QColor Primary(0x2563eb);
-        const QColor Success(0x16a34a);
-    }
-
-    void setBackground(QWidget *widget, const QColor &color) {
-    QPalette pal = widget->palette();
-    pal.setColor(QPalette::Window, color);
-    widget->setAutoFillBackground(true);
-    widget->setPalette(pal);
-}
-
-void setTextColor(QWidget *widget, const QColor &color) {
-QPalette pal = widget->palette();
-pal.setColor(QPalette::WindowText, color);
-pal.setColor(QPalette::ButtonText, color);
-widget->setPalette(pal);
-}
-
-void setLabelStyle(
-        QLabel *label,
-        int pointSize,
-        QFont::Weight weight = QFont::Normal,
-        const QColor &color = Theme::Text
-) {
-    QFont font = label->font();
-    font.setPointSize(pointSize);
-    font.setWeight(weight);
-    label->setFont(font);
-    setTextColor(label, color);
-}
-
-void addSoftShadow(QWidget *widget) {
-    auto *shadow = new QGraphicsDropShadowEffect(widget);
-    shadow->setBlurRadius(24);
-    shadow->setOffset(0, 6);
-    shadow->setColor(QColor(15, 23, 42, 28));
-    widget->setGraphicsEffect(shadow);
-}
-
-void markSurface(QFrame *frame, bool shadow = true) {
-    frame->setProperty("role", "surface");
-    setBackground(frame, Theme::Surface);
-
-    if (shadow) {
-        addSoftShadow(frame);
-    }
-}
-
-void setButtonFont(QPushButton *button, int pointSize = 11) {
-    QFont font = button->font();
-    font.setPointSize(pointSize);
-    font.setWeight(QFont::DemiBold);
-    button->setFont(font);
-}
-
-}
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -179,41 +126,85 @@ void MainWindow::setupCenterPanel() {
     centerLayout->setContentsMargins(24, 24, 24, 24);
     centerLayout->setSpacing(18);
 
-    cardFrame = new QFrame;
-    markSurface(cardFrame);
-    cardFrame->setMinimumHeight(360);
+    initFlashCardView();
+    centerLayout->addWidget(flashCardView, 1);
 
-    auto *cardLayout = new QVBoxLayout(cardFrame);
-    cardLayout->setContentsMargins(36, 36, 36, 36);
-    cardLayout->setSpacing(20);
+    auto *feedbackLayout = setupFeedbackButtons();
+    centerLayout->addLayout(feedbackLayout);
+}
 
-    cardFrontLabel = new QLabel(tr("正面\n\n点击卡片查看答案"));
-    cardFrontLabel->setAlignment(Qt::AlignCenter);
-    cardFrontLabel->setWordWrap(true);
-    cardFrontLabel->setMinimumHeight(280);
-    cardFrontLabel->setCursor(Qt::PointingHandCursor);
-    setLabelStyle(cardFrontLabel, 26, QFont::Bold, Theme::Text);
+void MainWindow::initFlashCardView() {
+    flashCardView = new QQuickWidget(centerPanel);
+    flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    flashCardView->setClearColor(Qt::transparent);
+    flashCardView->setMinimumHeight(420);
+    QJsonArray cards;
 
-    cardLayout->addWidget(cardFrontLabel, 1);
+    auto appendCard = [&cards](const QString &front, const QString &back) {
+        QJsonObject card;
+        card.insert(QStringLiteral("front"), front);
+        card.insert(QStringLiteral("back"), back);
+        cards.append(card);
+    };
 
-    cardBackLabel = new QLabel(tr("反面\n\n隐藏中..."));
-    cardBackLabel->setAlignment(Qt::AlignCenter);
-    cardBackLabel->setWordWrap(true);
-    setLabelStyle(cardBackLabel, 23, QFont::Bold, Theme::Success);
-    cardBackLabel->hide();
+    appendCard(
+            tr("C++ RAII 是什么？"),
+            tr("Resource Acquisition Is Initialization：把资源生命周期绑定到对象生命周期，构造获取，析构释放。")
+    );
 
-    cardLayout->addWidget(cardBackLabel, 1);
+    appendCard(
+            tr("SM-2 算法中的 EF 代表什么？"),
+            tr("Easiness Factor，表示卡片对学习者的难易权重，会影响下一次复习间隔。")
+    );
 
-    centerLayout->addWidget(cardFrame, 1);
+    appendCard(
+            tr("Qt 信号槽适合解决什么问题？"),
+            tr("用于对象之间的松耦合通信，发送方不需要知道接收方的具体实现。")
+    );
 
+    appendCard(
+            tr("被动视图 Passive View 的核心思想是什么？"),
+            tr("View 只负责展示与上报事件，业务状态和流程由 Controller / Presenter 管理。")
+    );
+
+    flashCardCount = cards.size();
+    currentFlashCardIndex = 0;
+
+    const QString cardsJson = QString::fromUtf8(
+            QJsonDocument(cards).toJson(QJsonDocument::Compact)
+    );
+
+    qWarning() << "C++ cardsJson =" << cardsJson;
+
+    flashCardView->rootContext()->setContextProperty(QStringLiteral("cardsJson"), cardsJson);
+    flashCardView->setSource(QUrl(QStringLiteral("qrc:/styles/FlashCardStack.qml")));
+
+    if (auto *root = flashCardView->rootObject()) {
+        qWarning() << "QML root loaded:" << root << root->metaObject()->className();
+
+        root->setProperty("cardsJsonInternal", cardsJson);
+        QMetaObject::invokeMethod(root, "loadCardsFromJson", Qt::DirectConnection);
+
+        root->setProperty("currentIndex", currentFlashCardIndex);
+        root->setProperty("requestedIndex", currentFlashCardIndex);
+        root->setProperty("nextRequest", 0);
+        root->setProperty("flipped", false);
+
+        qWarning() << "cardCount after load =" << root->property("cardCount").toInt();
+    } else {
+        qWarning() << "FlashCardStack rootObject is null";
+    }
+}
+
+QHBoxLayout* MainWindow::setupFeedbackButtons() {
     auto *feedbackLayout = new QHBoxLayout;
     feedbackLayout->setSpacing(12);
 
     const QStringList feedbackTexts = {
-            tr("生疏\n(F1)"),
+            tr("忘记\n(F1)"),
             tr("困难\n(F2)"),
-            tr("良好\n(F3)"),
-            tr("简单\n(F4)")
+            tr("普通\n(F3)"),
+            tr("熟悉\n(F4)")
     };
 
     const QStringList variants = {
@@ -229,11 +220,38 @@ void MainWindow::setupCenterPanel() {
         feedbackBtns[i]->setMinimumHeight(62);
         setButtonFont(feedbackBtns[i], 11);
 
+        connect(feedbackBtns[i], &QPushButton::clicked,
+                this, &MainWindow::showNextFlashCard);
+
         feedbackLayout->addWidget(feedbackBtns[i]);
     }
 
-    centerLayout->addLayout(feedbackLayout);
+    return feedbackLayout;
 }
+
+void MainWindow::showNextFlashCard() {
+    if (!flashCardView) {
+        return;
+    }
+
+    QObject *root = flashCardView->rootObject();
+    if (!root) {
+        qWarning() << "Flash card QML root object is null.";
+        return;
+    }
+
+    if (root->property("switching").toBool()) {
+        return;
+    }
+
+    const int currentIndex = root->property("currentIndex").toInt();
+    const int nextIndex = currentIndex + 1;
+    qWarning() << "Switch flash card:" << currentIndex << "->" << nextIndex;
+
+    root->setProperty("requestedIndex", nextIndex);
+}
+
+
 
 void MainWindow::setupRightPanel() {
     rightPanel = new QWidget;
@@ -319,152 +337,11 @@ void MainWindow::setupRightPanel() {
 void MainWindow::setupStyles() {
     setBackground(this, Theme::WindowBg);
 
-    setStyleSheet(R"(
-        QMainWindow {
-            background: #f7f8fb;
-        }
+    QFile qssFile(":/styles/MainWindow.qss");
+    if (!qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "Failed to load QSS resource" << qssFile.fileName() << qssFile.errorString();
+        return;
+    }
 
-        QMenuBar {
-            background: #ffffff;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 2px;
-        }
-
-        QMenuBar::item {
-            padding: 6px 10px;
-            border-radius: 6px;
-            color: #1f2937;
-        }
-
-        QMenuBar::item:selected {
-            background: #eef2ff;
-            color: #2563eb;
-        }
-
-        QMenu {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 6px;
-        }
-
-        QMenu::item {
-            padding: 7px 28px 7px 18px;
-            border-radius: 6px;
-            color: #1f2937;
-        }
-
-        QMenu::item:selected {
-            background: #eff6ff;
-            color: #2563eb;
-        }
-
-        QWidget[panel="side"] {
-            background: #f3f6fa;
-        }
-
-        QFrame[role="surface"] {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-        }
-
-        QListWidget#deckList {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 6px;
-            outline: none;
-        }
-
-        QListWidget#deckList::item {
-            padding: 10px 12px;
-            margin: 2px;
-            border-radius: 8px;
-            color: #334155;
-        }
-
-        QListWidget#deckList::item:hover {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        QListWidget#deckList::item:selected {
-            background: #2563eb;
-            color: #ffffff;
-        }
-
-        QPushButton {
-            min-height: 34px;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-
-        QPushButton[variant="primary"] {
-            background: #2563eb;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="primary"]:hover {
-            background: #1d4ed8;
-        }
-
-        QPushButton[variant="danger"] {
-            background: #ef4444;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="danger"]:hover {
-            background: #dc2626;
-        }
-
-        QPushButton[variant="warning"] {
-            background: #f97316;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="warning"]:hover {
-            background: #ea580c;
-        }
-
-        QPushButton[variant="normal"] {
-            background: #f59e0b;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="normal"]:hover {
-            background: #d97706;
-        }
-
-        QPushButton[variant="success"] {
-            background: #16a34a;
-            color: #ffffff;
-        }
-
-        QPushButton[variant="success"]:hover {
-            background: #15803d;
-        }
-
-        QPushButton:pressed {
-            padding-top: 10px;
-            padding-bottom: 6px;
-        }
-
-        QProgressBar#dailyProgress {
-            height: 18px;
-            border: none;
-            border-radius: 9px;
-            background: #e5e7eb;
-            text-align: center;
-            color: #334155;
-            font-size: 11px;
-        }
-
-        QProgressBar#dailyProgress::chunk {
-            border-radius: 9px;
-            background: #2563eb;
-        }
-    )");
+    setStyleSheet(QString::fromUtf8(qssFile.readAll()));
 }
