@@ -30,6 +30,9 @@ private:
     void setupRightPanel();
     void setupStyles();
 
+    void initFlashCardView();
+    class QHBoxLayout* setupFeedbackButtons();
+
 private slots:
     void showNextFlashCard();
 

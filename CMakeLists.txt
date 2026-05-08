@@ -35,6 +35,8 @@ include_directories(src)
 file(GLOB_RECURSE SOURCES
         "src/*.cpp"
         "src/*.h"
+        "src/view/*.cpp"
+        "src/view/*.h"
         "src/view/*.ui"
         "res/resources.qrc"
 )

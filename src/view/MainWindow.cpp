@@ -25,73 +25,9 @@
 #include <QVariant>
 #include <QQmlContext>
 
+#include "StyleUtils.h"
 
-namespace {
 
-    namespace Theme {
-        const QColor WindowBg(0xf7f8fb);
-        const QColor SideBg(0xf3f6fa);
-        const QColor Surface(0xffffff);
-
-        const QColor Text(0x1f2937);
-        const QColor MutedText(0x64748b);
-
-        const QColor Primary(0x2563eb);
-        const QColor Success(0x16a34a);
-    }
-
-    void setBackground(QWidget *widget, const QColor &color) {
-    QPalette pal = widget->palette();
-    pal.setColor(QPalette::Window, color);
-    widget->setAutoFillBackground(true);
-    widget->setPalette(pal);
-}
-
-void setTextColor(QWidget *widget, const QColor &color) {
-QPalette pal = widget->palette();
-pal.setColor(QPalette::WindowText, color);
-pal.setColor(QPalette::ButtonText, color);
-widget->setPalette(pal);
-}
-
-void setLabelStyle(
-        QLabel *label,
-        int pointSize,
-        QFont::Weight weight = QFont::Normal,
-        const QColor &color = Theme::Text
-) {
-    QFont font = label->font();
-    font.setPointSize(pointSize);
-    font.setWeight(weight);
-    label->setFont(font);
-    setTextColor(label, color);
-}
-
-void addSoftShadow(QWidget *widget) {
-    auto *shadow = new QGraphicsDropShadowEffect(widget);
-    shadow->setBlurRadius(24);
-    shadow->setOffset(0, 6);
-    shadow->setColor(QColor(15, 23, 42, 28));
-    widget->setGraphicsEffect(shadow);
-}
-
-void markSurface(QFrame *frame, bool shadow = true) {
-    frame->setProperty("role", "surface");
-    setBackground(frame, Theme::Surface);
-
-    if (shadow) {
-        addSoftShadow(frame);
-    }
-}
-
-void setButtonFont(QPushButton *button, int pointSize = 11) {
-    QFont font = button->font();
-    font.setPointSize(pointSize);
-    font.setWeight(QFont::DemiBold);
-    button->setFont(font);
-}
-
-}
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -190,6 +126,14 @@ void MainWindow::setupCenterPanel() {
     centerLayout->setContentsMargins(24, 24, 24, 24);
     centerLayout->setSpacing(18);
 
+    initFlashCardView();
+    centerLayout->addWidget(flashCardView, 1);
+
+    auto *feedbackLayout = setupFeedbackButtons();
+    centerLayout->addLayout(feedbackLayout);
+}
+
+void MainWindow::initFlashCardView() {
     flashCardView = new QQuickWidget(centerPanel);
     flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
     flashCardView->setClearColor(Qt::transparent);
@@ -238,8 +182,6 @@ void MainWindow::setupCenterPanel() {
     if (auto *root = flashCardView->rootObject()) {
         qWarning() << "QML root loaded:" << root << root->metaObject()->className();
 
-        // 把 cardsJson 写入 QML 内部属性，并主动触发一次 reload。
-        // 注意：QML 里不能声明和 context property 同名的属性，否则会遮蔽 context property。
         root->setProperty("cardsJsonInternal", cardsJson);
         QMetaObject::invokeMethod(root, "loadCardsFromJson", Qt::DirectConnection);
 
@@ -252,11 +194,9 @@ void MainWindow::setupCenterPanel() {
     } else {
         qWarning() << "FlashCardStack rootObject is null";
     }
+}
 
-
-
-    centerLayout->addWidget(flashCardView, 1);
-
+QHBoxLayout* MainWindow::setupFeedbackButtons() {
     auto *feedbackLayout = new QHBoxLayout;
     feedbackLayout->setSpacing(12);
 
@@ -286,8 +226,7 @@ void MainWindow::setupCenterPanel() {
         feedbackLayout->addWidget(feedbackBtns[i]);
     }
 
-
-    centerLayout->addLayout(feedbackLayout);
+    return feedbackLayout;
 }
 
 void MainWindow::showNextFlashCard() {
@@ -306,13 +245,6 @@ void MainWindow::showNextFlashCard() {
     }
 
     const int currentIndex = root->property("currentIndex").toInt();
-    const int cardCount = root->property("cardCount").toInt();
-
-//    if (cardCount <= 1) {
-//        qWarning() << "Card count is too small:" << cardCount;
-//        return;
-//    }
-
     const int nextIndex = currentIndex + 1;
     qWarning() << "Switch flash card:" << currentIndex << "->" << nextIndex;
 
