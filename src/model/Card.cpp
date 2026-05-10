@@ -7,6 +7,7 @@
 
 
 namespace MindPalace::Model{
+
     // 默认构造函数
     Card::Card() {
         id = QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -63,4 +64,5 @@ namespace MindPalace::Model{
         lastReviewed = QDate::fromString(json["lastReviewed"].toString(), Qt::ISODate);
         nextReviewDate = QDate::fromString(json["nextDate"].toString(), Qt::ISODate);
     }
+
 }

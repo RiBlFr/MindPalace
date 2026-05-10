@@ -6,6 +6,7 @@
 #include <algorithm>
 
 namespace MindPalace::Model {
+
     Deck::Deck(const QString& name) : deckName(name) {}
 
     void Deck::addCard(std::unique_ptr<Card> card) {
@@ -50,4 +51,5 @@ namespace MindPalace::Model {
             cards.push_back(std::move(card));
         }
     }
+
 }
