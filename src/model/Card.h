@@ -9,8 +9,8 @@
 #include <QDate>
 #include <QJsonObject>
 
-namespace MindPalace {
-namespace Model {
+
+namespace MindPalace::Model {
 
 class Card {
 public:
@@ -57,6 +57,6 @@ public:
 };
 
 } // Model
-} // MindPalace
+// MindPalace
 
 #endif //MINDPALACE_CARD_H
