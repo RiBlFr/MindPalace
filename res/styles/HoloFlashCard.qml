@@ -87,146 +87,169 @@ Item {
             antialiasing: true
             clip: true
 
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.00; color: "#1A2980" }
-                GradientStop { position: 1.00; color: "#26D0CE" }
-            }
-
-            Repeater {
-                model: 12
-
-                Rectangle {
-                    width: cardBody.width * 1.45
-                    height: 2
-                    radius: 1
-                    color: "white"
-                    opacity: 0.065
-                    rotation: -18
-                    x: -cardBody.width * 0.22
-                    y: index * cardBody.height / 10
-                        + ((card.flipAngle >= 90 ? 1.0 - root.shineX : root.shineX) - 0.5) * 22
-                }
-            }
-
-            Canvas {
-                id: shineCanvas
+            Rectangle {
+                id: cardBackground
                 anchors.fill: parent
-                opacity: root.hovered ? 1.0 : 0.62
-                renderTarget: Canvas.Image
-                antialiasing: true
+                radius: parent.radius
 
-                function clamp(v, minValue, maxValue) {
-                    return Math.max(minValue, Math.min(maxValue, v))
+                transform: Rotation {
+                    origin.x: cardBackground.width / 2
+                    origin.y: cardBackground.height / 2
+                    axis.x: 0
+                    axis.y: 1
+                    axis.z: 0
+                    angle: card.flipAngle >= 90 ? 180 : 0
                 }
 
-                function roundedPath(ctx, x, y, w, h, r) {
-                    r = Math.min(r, w / 2, h / 2)
-
-                    ctx.beginPath()
-                    ctx.moveTo(x + r, y)
-                    ctx.lineTo(x + w - r, y)
-                    ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-                    ctx.lineTo(x + w, y + h - r)
-                    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-                    ctx.lineTo(x + r, y + h)
-                    ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-                    ctx.lineTo(x, y + r)
-                    ctx.quadraticCurveTo(x, y, x + r, y)
-                    ctx.closePath()
-                }
-
-                onPaint: {
-                    const ctx = getContext("2d")
-                    ctx.clearRect(0, 0, width, height)
-
-                    if (width <= 4 || height <= 4) {
-                        return
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop {
+                        position: 0.0
+                        color: Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
                     }
-
-                    const visualSx = clamp(root.shineX, 0.0, 1.0)
-                    const visualSy = clamp(root.shineY, 0.0, 1.0)
-
-                    // 背面时，卡片整体绕 Y 轴翻转了 180 度，Canvas 本地 X 和视觉 X 相反
-                    const sx = card.flipAngle >= 90 ? 1.0 - visualSx : visualSx
-                    const sy = visualSy
-
-                    const cx = sx * width
-                    const cy = sy * height
-
-                    const cornerRadius = Math.min(28, width * 0.12, height * 0.18)
-                    const glowRadius = Math.max(80, Math.min(width, height) * 0.95)
-
-                    ctx.save()
-
-                    roundedPath(ctx, 0, 0, width, height, cornerRadius)
-                    ctx.clip()
-
-                    // 柔和主光斑
-                    const radial = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius)
-                    radial.addColorStop(0.00, "rgba(255,255,255,0.58)")
-                    radial.addColorStop(0.22, "rgba(255,255,255,0.22)")
-                    radial.addColorStop(0.56, "rgba(255,255,255,0.06)")
-                    radial.addColorStop(1.00, "rgba(255,255,255,0.00)")
-
-                    ctx.fillStyle = radial
-                    ctx.fillRect(0, 0, width, height)
-
-                    // 斜向扫光，小窗口下也能覆盖整个卡片
-                    const sweepOffset = (sx - 0.5) * width * 0.65
-                    const sweep = ctx.createLinearGradient(
-                        -width * 0.35 + sweepOffset,
-                        height,
-                        width * 1.35 + sweepOffset,
-                        0
-                    )
-
-                    sweep.addColorStop(0.00, "rgba(255,255,255,0.00)")
-                    sweep.addColorStop(0.42, "rgba(255,255,255,0.00)")
-                    sweep.addColorStop(0.50, "rgba(255,255,255,0.24)")
-                    sweep.addColorStop(0.58, "rgba(255,255,255,0.00)")
-                    sweep.addColorStop(1.00, "rgba(255,255,255,0.00)")
-
-                    ctx.fillStyle = sweep
-                    ctx.fillRect(0, 0, width, height)
-
-                    // 顶部轻微玻璃感
-                    const glass = ctx.createLinearGradient(0, 0, 0, height)
-                    glass.addColorStop(0.00, "rgba(255,255,255,0.22)")
-                    glass.addColorStop(0.34, "rgba(255,255,255,0.06)")
-                    glass.addColorStop(1.00, "rgba(255,255,255,0.00)")
-
-                    ctx.fillStyle = glass
-                    ctx.fillRect(0, 0, width, height)
-
-                    ctx.restore()
-                }
-
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-                Component.onCompleted: requestPaint()
-
-                Connections {
-                    target: root
-
-                    function onShineXChanged() {
-                        shineCanvas.requestPaint()
+                    GradientStop {
+                        position: 0.5 + (root.shineX - 0.5) * 0.4
+                        color: Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
                     }
-
-                    function onShineYChanged() {
-                        shineCanvas.requestPaint()
-                    }
-
-                    function onHoveredChanged() {
-                        shineCanvas.requestPaint()
+                    GradientStop {
+                        position: 1.0
+                        color: Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
                     }
                 }
 
-                Connections {
-                    target: card
+                Repeater {
+                    model: 12
 
-                    function onFlipAngleChanged() {
-                        shineCanvas.requestPaint()
+                    Rectangle {
+                        width: cardBackground.width * 1.45
+                        height: 2
+                        radius: 1
+                        color: "white"
+                        opacity: 0.065
+                        rotation: -18
+                        x: -cardBackground.width * 0.22
+                        y: index * cardBackground.height / 10
+                            + (root.shineX - 0.5) * 22
+                    }
+                }
+
+                Canvas {
+                    id: shineCanvas
+                    anchors.fill: parent
+                    opacity: root.hovered ? 1.0 : 0.62
+                    renderTarget: Canvas.Image
+                    antialiasing: true
+
+                    function clamp(v, minValue, maxValue) {
+                        return Math.max(minValue, Math.min(maxValue, v))
+                    }
+
+                    function roundedPath(ctx, x, y, w, h, r) {
+                        r = Math.min(r, w / 2, h / 2)
+
+                        ctx.beginPath()
+                        ctx.moveTo(x + r, y)
+                        ctx.lineTo(x + w - r, y)
+                        ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+                        ctx.lineTo(x + w, y + h - r)
+                        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+                        ctx.lineTo(x + r, y + h)
+                        ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+                        ctx.lineTo(x, y + r)
+                        ctx.quadraticCurveTo(x, y, x + r, y)
+                        ctx.closePath()
+                    }
+
+                    onPaint: {
+                        const ctx = getContext("2d")
+                        ctx.clearRect(0, 0, width, height)
+
+                        if (width <= 4 || height <= 4) {
+                            return
+                        }
+
+                        const visualSx = clamp(root.shineX, 0.0, 1.0)
+                        const visualSy = clamp(root.shineY, 0.0, 1.0)
+
+                        const sx = visualSx
+                        const sy = visualSy
+
+                        const cx = sx * width
+                        const cy = sy * height
+
+                        const cornerRadius = Math.min(28, width * 0.12, height * 0.18)
+                        const glowRadius = Math.max(80, Math.min(width, height) * 0.95)
+
+                        ctx.save()
+
+                        roundedPath(ctx, 0, 0, width, height, cornerRadius)
+                        ctx.clip()
+
+                        // 柔和主光斑
+                        const radial = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius)
+                        radial.addColorStop(0.00, "rgba(255,255,255,0.58)")
+                        radial.addColorStop(0.22, "rgba(255,255,255,0.22)")
+                        radial.addColorStop(0.56, "rgba(255,255,255,0.06)")
+                        radial.addColorStop(1.00, "rgba(255,255,255,0.00)")
+
+                        ctx.fillStyle = radial
+                        ctx.fillRect(0, 0, width, height)
+
+                        // 斜向扫光，小窗口下也能覆盖整个卡片
+                        const sweepOffset = (sx - 0.5) * width * 0.65
+                        const sweep = ctx.createLinearGradient(
+                            -width * 0.35 + sweepOffset,
+                            height,
+                            width * 1.35 + sweepOffset,
+                            0
+                        )
+
+                        sweep.addColorStop(0.00, "rgba(255,255,255,0.00)")
+                        sweep.addColorStop(0.42, "rgba(255,255,255,0.00)")
+                        sweep.addColorStop(0.50, "rgba(255,255,255,0.24)")
+                        sweep.addColorStop(0.58, "rgba(255,255,255,0.00)")
+                        sweep.addColorStop(1.00, "rgba(255,255,255,0.00)")
+
+                        ctx.fillStyle = sweep
+                        ctx.fillRect(0, 0, width, height)
+
+                        const glass = ctx.createLinearGradient(0, 0, 0, height)
+                        glass.addColorStop(0.00, "rgba(255,255,255,0.22)")
+                        glass.addColorStop(0.34, "rgba(255,255,255,0.06)")
+                        glass.addColorStop(1.00, "rgba(255,255,255,0.00)")
+
+                        ctx.fillStyle = glass
+                        ctx.fillRect(0, 0, width, height)
+
+                        ctx.restore()
+                    }
+
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    Component.onCompleted: requestPaint()
+
+                    Connections {
+                        target: root
+
+                        function onShineXChanged() {
+                            shineCanvas.requestPaint()
+                        }
+
+                        function onShineYChanged() {
+                            shineCanvas.requestPaint()
+                        }
+
+                        function onHoveredChanged() {
+                            shineCanvas.requestPaint()
+                        }
+                    }
+
+                    Connections {
+                        target: card
+
+                        function onFlipAngleChanged() {
+                            shineCanvas.requestPaint()
+                        }
                     }
                 }
             }
@@ -367,11 +390,6 @@ Item {
                 localY <= card.height
 
             if (insideCard) {
-                // IMPORTANT:
-                // Do NOT mutate root.flipped here.
-                // The parent (FlashCardStack) is the single source of truth for flip state.
-                // Mutating here can race with card-switching and cause the next card to start
-                // on the wrong side.
                 root.cardClicked(!root.flipped)
             }
         }

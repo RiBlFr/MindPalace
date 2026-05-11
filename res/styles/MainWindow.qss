@@ -85,7 +85,7 @@ QPushButton[variant="primary"] {
     color: #ffffff;
 }
 
-QPushButton[variant="primary"]:hover {
+QPushButton:hover[variant="primary"] {
     background: #1d4ed8;
 }
 
@@ -94,7 +94,7 @@ QPushButton[variant="danger"] {
     color: #ffffff;
 }
 
-QPushButton[variant="danger"]:hover {
+QPushButton:hover[variant="danger"] {
     background: #dc2626;
 }
 
@@ -103,7 +103,7 @@ QPushButton[variant="warning"] {
     color: #ffffff;
 }
 
-QPushButton[variant="warning"]:hover {
+QPushButton:hover[variant="warning"] {
     background: #ea580c;
 }
 
@@ -112,7 +112,7 @@ QPushButton[variant="normal"] {
     color: #ffffff;
 }
 
-QPushButton[variant="normal"]:hover {
+QPushButton:hover[variant="normal"] {
     background: #d97706;
 }
 
@@ -121,7 +121,7 @@ QPushButton[variant="success"] {
     color: #ffffff;
 }
 
-QPushButton[variant="success"]:hover {
+QPushButton:hover[variant="success"] {
     background: #15803d;
 }
 
