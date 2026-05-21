@@ -54,5 +54,44 @@ namespace MindPalace::Service {
     };
 
 } // namespace MindPalace::Service
+/*附：实现的json表示：
+
+{
+    "cards": [
+        {
+            "back": "back text 1",
+            "easeFactor": 2.5,
+            "front": "front text 1",
+            "id": "ae3f03b8-1365-443d-b157-d987b1481bb8",
+            "interval": 0,
+            "lastReviewed": "2026-05-21",
+            "nextDate": "2026-05-21",
+            "repetitions": 0
+        },
+        {
+            "back": "back text 2",
+            "easeFactor": 2.5,
+            "front": "front text 2",
+            "id": "092369df-68b4-4c71-b6fe-aa89b922c896",
+            "interval": 0,
+            "lastReviewed": "2026-05-21",
+            "nextDate": "2026-05-21",
+            "repetitions": 0
+        },
+        {
+            "back": "back text 3",
+            "easeFactor": 2.5,
+            "front": "front text 3",
+            "id": "d5c1b358-0a24-4214-9ce5-93c893228bfd",
+            "interval": 0,
+            "lastReviewed": "2026-05-21",
+            "nextDate": "2026-05-21",
+            "repetitions": 0
+        }
+    ],
+    "deckName": "DebugDeck"
+}
+ *
+ */
 
 #endif // MINDPALACE_STORAGEMANAGER_H
