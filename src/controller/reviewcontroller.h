@@ -7,9 +7,14 @@
 #include <QString>
 #include <queue>
 
+#include <QObject>
+
 namespace MindPalace::Controller {
 
-class ReviewController {
+// 【改造】继承自 QObject，赋予该类发送和接收信号的超能力
+class ReviewController : public QObject {
+    Q_OBJECT
+
 public:
     enum class ReviewState {
         QuestionState,//显示卡片未回答
@@ -24,7 +29,8 @@ public:
         Easy = 5
     };
 
-    ReviewController() = default;
+    // 【改造】符合 Qt 标准规范的构造函数，带有可选的 parent 指针用于自动内存管理
+    explicit ReviewController(QObject* parent = nullptr);
 
     /**
      * @brief 开始一次牌组复习，并筛选出今日到期的卡片。
@@ -74,6 +80,29 @@ public:
      * @brief 获取本次复习开始时的到期卡片总数。
      */
     int totalCount() const;
+
+signals:
+    // ==========================================
+    // 【新增区】状态机向外界（总指挥）广播的核心事件
+    // ==========================================
+
+    /**
+     * @brief 当状态机切入“提问态”时触发
+     * 附带当前卡片的正面文字，通知外部进行 UI 渲染
+     */
+    void signal_showQuestion(const QString& frontText);
+
+    /**
+     * @brief 当状态机切入“答案态”时触发
+     * 附带当前卡片的背面文字，通知外部揭晓答案并显示评分按钮
+     */
+    void signal_showAnswer(const QString& backText);
+
+    /**
+     * @brief 当复习队列被彻底清空时触发
+     * 通知外部今日学习任务圆满结束，可切换至结算大图章页面
+     */
+    void signal_reviewFinished();
 
 private:
     Model::Deck* activeDeck = nullptr;
