@@ -5,16 +5,21 @@
 
 #include <QString>
 #include <vector>
+#include <QObject>
 
 namespace MindPalace::Controller {
 
-class DeckController {
+class DeckController : public QObject {
+    Q_OBJECT         // 【新增】Qt 元对象宏，告诉编译器这个类有信号和槽
+
 public:
     /**
      * @brief 构造牌组控制器，并自动从磁盘加载已有牌组。
      * @param decksDirPath 牌组 JSON 文件所在目录，默认为 data/decks。
+     * @param parent 【新增】Qt 的父对象指针，用于挂载到对象树上，防止内存泄漏
      */
-    explicit DeckController(const QString& decksDirPath = "data/decks");
+    explicit DeckController(const QString& decksDirPath = "data/decks"
+        , QObject* parent = nullptr);
 
     /**
      * @brief 创建新牌组，并以 <deckId>.json 的形式持久化到磁盘。
@@ -47,6 +52,17 @@ public:
      * @brief 获取当前已加载的全部牌组，供界面渲染使用。
      */
     const std::vector<Model::Deck>& getDecks() const;
+
+signals:
+    // ==========================================
+    // 【新增区】对外广播的信号器官
+    // ==========================================
+
+    /**
+     * @brief 当底层牌组数据发生增、删、改时，触发此信号。
+     * AppController 监听到后，会立即通知 MainWindow 重新拉取数据并刷新 UI。
+     */
+    void signal_deckListChanged();
 
 private:
     QString decksDirPath;

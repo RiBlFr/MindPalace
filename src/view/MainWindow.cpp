@@ -27,7 +27,7 @@
 
 #include "StyleUtils.h"
 
-
+#include <QCloseEvent>
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -39,7 +39,62 @@ MainWindow::MainWindow(QWidget *parent)
     resize(screenGeometry.width() * 0.9, screenGeometry.height() * 0.85);
 
     initUI();
+
+    // 1. 监听左侧牌组列表的点击事件
+    connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {
+        if (!text.isEmpty()) {
+            emit signal_requestStartReview(text); // 转发为全局业务请求
+        }
+    });
+
+    // 2. 绑定中央看板底部的 4 个评分按钮 (生疏、困难、良好、简单)
+    // 对应枚举值：Again=0, Hard=3, Good=4, Easy=5
+    int qualityMapping[4] = {0, 3, 4, 5};
+    for (int i = 0; i < 4; ++i) {
+        connect(feedbackBtns[i], &QPushButton::clicked, this, [this, q = qualityMapping[i]]() {
+            emit signal_requestSubmitFeedback(q); // 优雅地把按钮点击转换为带参数的业务信号
+        });
+    }
+
     setupStyles();
+}
+
+// 3. 拦截窗口关闭事件，通知总控进行数据安全落盘
+void MainWindow::closeEvent(QCloseEvent *event) {
+    emit signal_appWillClose();
+    event->accept();            // 允许窗口正常注销
+}
+
+void MainWindow::updateDeckListView(const std::vector<QString>& deckNames) const{
+    deckListWidget->clear(); // 先清空旧数据
+    for (const auto& name : deckNames) {
+        deckListWidget->addItem(name); // 逐个画上新数据
+    }
+}
+
+void MainWindow::renderQuestionLayout(const QString& frontText) const {
+    // 1. 将正面文字更新到 QQuickWidget 内部或者相应的 QLabel 中
+    flashCardView->setProperty("questionText", frontText);
+
+    // 2. 处于提问态时，用户还没想出答案，决不能给他们评分的机会
+    for (int i = 0; i < 4; ++i) {
+        feedbackBtns[i]->hide();
+    }
+}
+
+void MainWindow::renderAnswerLayout(const QString& backText) {
+    // 1. 将背面文字追加更新到 UI
+    flashCardView->setProperty("answerText", backText);
+
+    // 2.
+    for (int i = 0; i < 4; ++i) {
+        feedbackBtns[i]->show();
+    }
+}
+
+void MainWindow::showFinishedSummaryPage() {
+    // 这里可以执行页面切换逻辑，比如用 QStackedWidget 切换到打卡成功的大图章界面
+    // 麻烦rzb同学后期补充一下~
 }
 
 MainWindow::~MainWindow() = default;
