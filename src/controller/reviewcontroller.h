@@ -38,7 +38,7 @@ public:
      * @param deckFilePath 该牌组对应的 JSON 文件路径，用于评分后立即保存。
      * @return 存在可复习卡片时返回 true；没有到期卡片或参数无效时返回 false。
      * 注意：需要deckFilePath是因为想把deckcontroller 和 reviewcontroller分开
-     * 可以从reviewcontroller.h得到filepath（待商议）
+     * 可以从reviewcontroller.h得到filepath
      */
     bool startReview(Model::Deck* deck, const QString& deckFilePath);
 
