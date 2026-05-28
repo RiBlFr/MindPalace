@@ -24,6 +24,8 @@ namespace MindPalace::Model {
     QJsonObject Deck::toJson() const {
         QJsonObject json;
         json["deckName"] = deckName;
+        json["deckId"] = deckId;
+
 
         // 创建一个 JSON 数组来存放所有卡片
         QJsonArray cardsArray;
@@ -39,6 +41,7 @@ namespace MindPalace::Model {
 
     void Deck::fromJson(const QJsonObject& json) {
         deckName = json["deckName"].toString();
+        deckId = json["deckId"].toString();
 
         cards.clear();
 
