@@ -11,8 +11,8 @@
 
 namespace MindPalace::Controller {
 
-DeckController::DeckController(const QString& decksDirPath)
-    : decksDirPath(decksDirPath) {
+DeckController::DeckController(const QString& decksDirPath, QObject* parent)
+    : QObject(parent), decksDirPath(decksDirPath) {
     loadDecks();
 }
 
@@ -65,6 +65,7 @@ bool DeckController::createDeck(const QString& name) {
     }
 
     decks.push_back(std::move(deck));
+    emit signal_deckListChanged();
     return true;
 }
 
@@ -99,6 +100,7 @@ bool DeckController::deleteDeck(const QString& deckName) {
     for (auto iterator = decks.begin(); iterator != decks.end(); ++iterator) {
         if (&(*iterator) == deck) {
             decks.erase(iterator);
+            emit signal_deckListChanged();
             return true;
         }
     }
@@ -143,6 +145,7 @@ bool DeckController::renameDeck(const QString& deckName, const QString& newName)
         return false;
     }
 
+    emit signal_deckListChanged();
     return true;
 }
 
