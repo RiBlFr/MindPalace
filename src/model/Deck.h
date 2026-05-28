@@ -26,6 +26,7 @@ namespace MindPalace::Model {
         // ==========================================
         // 2. 基础属性
         // ==========================================
+        QString deckId;
         QString deckName;
 
         std::vector<std::unique_ptr<Card>> cards;

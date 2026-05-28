@@ -8,7 +8,9 @@
 #include "reviewcontroller.h"
 #include "service/storagemanager.h"
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 
 namespace MindPalace::Controller {
 
@@ -50,9 +52,15 @@ void AppController::start() {
 // =========================================================================
 
 void AppController::initializeControllers() {
-    // 实例化底层的核心业务控制器
-    // DeckController 的默认构造函数会自动扫描并水化 "data/decks" 目录下的所有本地牌组数据
-    m_deckController = std::make_unique<DeckController>();
+    // 优先用可执行文件所在目录（部署和 IDE 运行均适用）；
+    // 若不存在则回退到当前工作目录（方便从项目根目录直接运行时调试）
+    const QString relPath = QStringLiteral("data/decks");
+    const QString appDirPath = QCoreApplication::applicationDirPath() + "/" + relPath;
+    m_decksDirPath = QDir(appDirPath).exists() ? appDirPath : relPath;
+
+    qDebug() << "AppController: 牌组目录 ->" << m_decksDirPath;
+
+    m_deckController = std::make_unique<DeckController>(m_decksDirPath);
     m_reviewController = std::make_unique<ReviewController>();
 }
 
@@ -83,33 +91,62 @@ void AppController::setupGlobalConnections() {
     connect(m_mainWindow.get(), &MainWindow::signal_appWillClose,
             this, &AppController::handleAppQuit);
 
+    // 用户点击"重置卡组进度"按钮
+    connect(m_mainWindow.get(), &MainWindow::signal_requestResetDeck,
+            this, &AppController::handleResetDeck);
 
-    // ---------------------------------------------------------------------
-    // 链接 B：路由 ReviewController 的核心状态机变化至 View 层（ReviewController -> View）
-    // 为了防止 MainWindow 被迫引入过多的子控制器头文件，我们在此处使用现代 C++ Lambda 表达式进行无缝调度
-    // ---------------------------------------------------------------------
 
-    // 当复习队列提取出新卡片并切入“提问态”时，通知界面刷新中央看板的正面文字，并隐藏下方的评分按钮
+    // 用户将卡片翻面 → 驱动 ReviewController 进入答案态（state = AnswerState）
+    connect(m_mainWindow.get(), &MainWindow::signal_requestShowAnswer,
+            this, [this]() {
+                m_reviewController->showAnswer();
+            });
+
+    // ReviewController 进入提问态 → 刷新卡片正面 + 预加载背面 + 更新进度
     connect(m_reviewController.get(), &ReviewController::signal_showQuestion,
             this, [this](const QString& frontText) {
-                // 此处完美契合被动视图（Passive View）规范，界面只负责接收指令渲染文字
-                // m_mainWindow->renderQuestionLayout(frontText);
-                qDebug() << "AppController 状态路由: 切换至[提问态] ->" << frontText;
+                const int remaining = m_reviewController->remainingCount();
+                const bool hasNextCard = remaining > 1;
+                m_mainWindow->renderQuestionLayout(frontText, hasNextCard);
+                // Pre-load back text so it's visible the moment the user flips,
+                // without waiting for the showAnswer() signal chain to complete.
+                if (Model::Card* card = m_reviewController->currentCard()) {
+                    m_mainWindow->preloadAnswerText(card->back);
+                }
+                const int total = m_reviewController->totalCount();
+                m_mainWindow->updateProgressView(total - remaining, total);
             });
 
-    // 当用户触发翻面请求并切入“答案态”时，通知界面在中央看板上叠加分隔线与背面答案，并瞬间弹出 4 个颜色美化按钮
+    // ReviewController 进入答案态 → 揭示背面、弹出评分按钮
     connect(m_reviewController.get(), &ReviewController::signal_showAnswer,
             this, [this](const QString& backText) {
-                // m_mainWindow->renderAnswerLayout(backText);
-                qDebug() << "AppController 状态路由: 切换至[答案态] ->" << backText;
+                m_mainWindow->renderAnswerLayout(backText);
             });
 
-    // 当整个牌组当日处于“遗忘临界点”的卡片被全部消化完毕，复习状态机抛出完结信号，总控指挥界面跳转至结算特效页
+    // 复习队列清空 → 跳转结算页
     connect(m_reviewController.get(), &ReviewController::signal_reviewFinished,
             this, [this]() {
-                // m_mainWindow->showFinishedSummaryPage();
-                qDebug() << "AppController 状态路由: 今日复习已全部圆满结束！";
+                m_mainWindow->showFinishedSummaryPage();
+                m_mainWindow->updateProgressView(
+                    m_reviewController->totalCount(),
+                    m_reviewController->totalCount()
+                );
             });
+
+    // 牌组增删改 → 刷新左侧列表
+    connect(m_deckController.get(), &DeckController::signal_deckListChanged,
+            this, [this]() { refreshDeckList(); });
+
+    // 初始化时立即填充一次牌组列表
+    refreshDeckList();
+}
+
+void AppController::refreshDeckList() {
+    std::vector<QString> names;
+    for (const auto& deck : m_deckController->getDecks()) {
+        names.push_back(deck.deckName);
+    }
+    m_mainWindow->updateDeckListView(names);
 }
 
 // =========================================================================
@@ -136,9 +173,8 @@ void AppController::handleStartReview(const QString& deckName) {
         return;
     }
 
-    // 2. 组装该牌组对应的本地物理 JSON 配置文件路径
-    // 完全对齐系统的命名空间规范：data/decks/<deckName>.json
-    QString targetFilePath = QString("data/decks/%1.json").arg(deckName);
+    // 文件路径从已解析的目录构建，与 initializeControllers 保持一致
+    QString targetFilePath = QDir(m_decksDirPath).filePath(targetDeck->deckId + ".json");
 
     // 3. 为复习状态机注入数据源并宣告开启复习轮询
     bool hasDueCards = m_reviewController->startReview(targetDeck, targetFilePath);
@@ -172,6 +208,18 @@ void AppController::handleSubmitFeedback(int quality) {
     if (!saveResult) {
         qCritical() << "AppController 核心灾难: 闪卡参数更新或本地 JSON 文件原子化落盘失败！状态已回滚。";
     }
+}
+
+void AppController::handleResetDeck(const QString& deckName) {
+    qDebug() << "AppController: 正在重置牌组进度 ->" << deckName;
+
+    if (!m_deckController->resetDeck(deckName)) {
+        qWarning() << "AppController: 牌组重置失败:" << deckName;
+        return;
+    }
+
+    qDebug() << "AppController: 重置完成，重启复习会话...";
+    handleStartReview(deckName);
 }
 
 void AppController::handleAppQuit() {
