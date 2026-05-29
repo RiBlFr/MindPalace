@@ -26,6 +26,7 @@ namespace MindPalace::Model {
         // ==========================================
         // 2. 基础属性
         // ==========================================
+        QString deckId;
         QString deckName;
         //新增属性by zhy,作用同于cardId,并且在tojson()和fromjson()中将其加入/读出json文件
         QString deckId;

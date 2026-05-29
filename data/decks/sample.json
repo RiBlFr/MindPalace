@@ -1,0 +1,55 @@
+{
+    "deckName": "C++ 知识卡组",
+    "cards": [
+        {
+            "id": "c001",
+            "front": "RAII 是什么？",
+            "back": "Resource Acquisition Is Initialization：将资源生命周期绑定到对象生命周期，构造时获取，析构时释放。",
+            "repetitions": 0,
+            "interval": 0,
+            "easeFactor": 2.5,
+            "lastReviewed": "2026-05-01",
+            "nextDate": "2026-05-01"
+        },
+        {
+            "id": "c002",
+            "front": "SM-2 算法中 EF 代表什么？",
+            "back": "Easiness Factor（难易系数），初始值 2.5，影响下次复习间隔的增长速度，下限 1.3。",
+            "repetitions": 0,
+            "interval": 0,
+            "easeFactor": 2.5,
+            "lastReviewed": "2026-05-01",
+            "nextDate": "2026-05-01"
+        },
+        {
+            "id": "c003",
+            "front": "Qt 信号槽机制适合解决什么问题？",
+            "back": "对象间的松耦合通信：发送方无需知道接收方的具体实现，天然支持跨线程通信。",
+            "repetitions": 0,
+            "interval": 0,
+            "easeFactor": 2.5,
+            "lastReviewed": "2026-05-01",
+            "nextDate": "2026-05-01"
+        },
+        {
+            "id": "c004",
+            "front": "std::unique_ptr 与 std::shared_ptr 的核心区别？",
+            "back": "unique_ptr：独占所有权，零开销，不可复制只能移动。shared_ptr：共享所有权，引用计数，有额外堆分配开销。",
+            "repetitions": 0,
+            "interval": 0,
+            "easeFactor": 2.5,
+            "lastReviewed": "2026-05-01",
+            "nextDate": "2026-05-01"
+        },
+        {
+            "id": "c005",
+            "front": "被动视图（Passive View）的核心思想？",
+            "back": "View 只负责展示与上报事件，不持有业务状态，所有逻辑由 Controller / Presenter 管理。",
+            "repetitions": 0,
+            "interval": 0,
+            "easeFactor": 2.5,
+            "lastReviewed": "2026-05-01",
+            "nextDate": "2026-05-01"
+        }
+    ]
+}

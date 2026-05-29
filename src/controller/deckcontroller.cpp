@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QUuid>
 
+#include <algorithm>
 #include <utility>
 
 namespace MindPalace::Controller {
@@ -151,6 +152,23 @@ bool DeckController::renameDeck(const QString& deckName, const QString& newName)
 
 const std::vector<Model::Deck>& DeckController::getDecks() const {
     return decks;
+}
+
+bool DeckController::resetDeck(const QString& deckName) {
+    Model::Deck* deck = findDeckByName(deckName);
+    if (!deck) return false;
+
+    const QDate today = QDate::currentDate();
+    for (auto& cardPtr : deck->cards) {
+        if (!cardPtr) continue;
+        cardPtr->repetitions   = 0;
+        cardPtr->interval      = 0.0f;
+        cardPtr->easeFactor    = 2.5f;
+        cardPtr->lastReviewed  = today;
+        cardPtr->nextReviewDate = today;
+    }
+
+    return Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId));
 }
 
 Model::Deck* DeckController::findDeckByName(const QString& deckName) {

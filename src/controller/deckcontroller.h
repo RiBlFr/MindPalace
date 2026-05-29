@@ -53,6 +53,13 @@ public:
      */
     const std::vector<Model::Deck>& getDecks() const;
 
+    /**
+     * @brief 将指定牌组的所有卡片 SM-2 参数重置为初始状态（全部今日到期）。
+     * @param deckName 要重置的牌组名称。
+     * @return 重置并写盘成功时返回 true，否则返回 false。
+     */
+    bool resetDeck(const QString& deckName);
+
 signals:
     // ==========================================
     // 【新增区】对外广播的信号器官
