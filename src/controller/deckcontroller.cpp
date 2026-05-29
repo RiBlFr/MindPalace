@@ -1,6 +1,7 @@
 #include "deckcontroller.h"
 #include "service/storagemanager.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -21,15 +22,20 @@ void DeckController::loadDecks() {
 
     QDir decksDirectory;
     if (!decksDirectory.mkpath(decksDirPath)) {
+        qWarning() << "loadDecks failed: unable to create or access deck directory:"
+                   << decksDirPath;
         return;
     }
     decksDirectory.setPath(decksDirPath);
 
     const QFileInfoList deckFiles =
         decksDirectory.entryInfoList({"*.json"}, QDir::Files, QDir::Name);
+    Service::StorageError error;
     for (const QFileInfo& deckFile : deckFiles) {
         Model::Deck deck;
-        if (!Service::StorageManager::loadDeck(deckFile.absoluteFilePath(), deck)) {
+        if (!Service::StorageManager::loadDeck(deckFile.absoluteFilePath(), deck, &error)) {
+            qWarning() << "loadDecks skipped file:" << deckFile.absoluteFilePath()
+                       << error.message;
             continue;
         }
 
@@ -39,14 +45,23 @@ void DeckController::loadDecks() {
 }
 
 bool DeckController::createDeck(const QString& name) {
-    if (name.isEmpty() || deckNameExists(name)) {
+    const QString cleanedName = name.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "createDeck failed: deck name is empty after trimming.";
         return false;
     }
 
-    Model::Deck deck(name);
-    deck.deckId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    if (deckNameExists(cleanedName)) {
+        qWarning() << "createDeck failed: deck name already exists:" << cleanedName;
+        return false;
+    }
 
-    if (!Service::StorageManager::saveDeck(deck, deckFilePath(deck.deckId))) {
+    Model::Deck deck(cleanedName);
+    deck.deckId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(deck, deckFilePath(deck.deckId), &error)) {
+        // 保存失败时不加入内存，避免界面出现磁盘中不存在的牌组。
+        qWarning() << "createDeck failed: unable to save deck file:" << error.message;
         return false;
     }
 
@@ -56,39 +71,78 @@ bool DeckController::createDeck(const QString& name) {
 }
 
 bool DeckController::deleteDeck(const QString& deckName) {
-    const Model::Deck* deck = findDeckByName(deckName);
+    const QString cleanedName = deckName.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "deleteDeck failed: deck name is empty after trimming.";
+        return false;
+    }
+
+    Model::Deck* deck = findDeckByName(cleanedName);
     if (!deck) {
+        qWarning() << "deleteDeck failed: deck does not exist:" << cleanedName;
         return false;
     }
 
     const QString filePath = deckFilePath(deck->deckId);
-    if (!QFile::remove(filePath)) {
+    if (filePath.isEmpty()) {
+        qWarning() << "deleteDeck failed: deck id is empty.";
         return false;
     }
 
-    decks.erase(
-        std::remove_if(decks.begin(), decks.end(),
-            [&deckName](const Model::Deck& d) { return d.deckName == deckName; }),
-        decks.end());
+    if (QFile::exists(filePath)) {
+        if (!QFile::remove(filePath)) {
+            qWarning() << "deleteDeck failed: unable to remove deck file:" << filePath;
+            return false;
+        }
+    } else {
+        qWarning() << "deleteDeck notice: deck file does not exist:" << filePath;
+    }
 
-    emit signal_deckListChanged();
-    return true;
+    for (auto iterator = decks.begin(); iterator != decks.end(); ++iterator) {
+        if (&(*iterator) == deck) {
+            decks.erase(iterator);
+            emit signal_deckListChanged();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool DeckController::renameDeck(const QString& deckName, const QString& newName) {
-    if (newName.isEmpty() || deckNameExists(newName)) {
+    const QString cleanedDeckName = deckName.trimmed();
+    const QString cleanedNewName = newName.trimmed();
+    if (cleanedDeckName.isEmpty() || cleanedNewName.isEmpty()) {
+        qWarning() << "renameDeck failed: a deck name is empty after trimming.";
         return false;
     }
 
-    Model::Deck* deck = findDeckByName(deckName);
+    Model::Deck* deck = findDeckByName(cleanedDeckName);
     if (!deck) {
+        qWarning() << "renameDeck failed: deck does not exist:" << cleanedDeckName;
         return false;
     }
 
-    deck->deckName = newName;
+    if (deck->deckName == cleanedNewName) {
+        return true;
+    }
 
-    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId))) {
-        deck->deckName = deckName; // rollback
+    if (deckNameExists(cleanedNewName)) {
+        qWarning() << "renameDeck failed: deck name already exists:" << cleanedNewName;
+        return false;
+    }
+
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "renameDeck failed: deck id is empty.";
+        return false;
+    }
+
+    const QString oldName = deck->deckName;
+    deck->deckName = cleanedNewName;
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        deck->deckName = oldName;
+        qWarning() << "renameDeck failed: unable to save deck file:" << error.message;
         return false;
     }
 
@@ -118,6 +172,10 @@ bool DeckController::resetDeck(const QString& deckName) {
 }
 
 Model::Deck* DeckController::findDeckByName(const QString& deckName) {
+    if (deckName.isEmpty()) {
+        return nullptr;
+    }
+
     for (Model::Deck& deck : decks) {
         if (deck.deckName == deckName) {
             return &deck;
@@ -128,6 +186,10 @@ Model::Deck* DeckController::findDeckByName(const QString& deckName) {
 }
 
 const Model::Deck* DeckController::findDeckByName(const QString& deckName) const {
+    if (deckName.isEmpty()) {
+        return nullptr;
+    }
+
     for (const Model::Deck& deck : decks) {
         if (deck.deckName == deckName) {
             return &deck;
@@ -138,10 +200,18 @@ const Model::Deck* DeckController::findDeckByName(const QString& deckName) const
 }
 
 bool DeckController::deckNameExists(const QString& deckName) const {
+    if (deckName.isEmpty()) {
+        return false;
+    }
+
     return findDeckByName(deckName) != nullptr;
 }
 
 QString DeckController::deckFilePath(const QString& deckId) const {
+    if (deckId.isEmpty()) {
+        return {};
+    }
+
     return QDir(decksDirPath).filePath(deckId + ".json");
 }
 
