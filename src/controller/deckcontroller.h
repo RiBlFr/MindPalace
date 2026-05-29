@@ -1,4 +1,4 @@
-#ifndef MINDPALACE_DECKCONTROLLER_H
+﻿#ifndef MINDPALACE_DECKCONTROLLER_H
 #define MINDPALACE_DECKCONTROLLER_H
 
 #include "model/Deck.h"
@@ -23,13 +23,16 @@ public:
 
     /**
      * @brief 创建新牌组，并以 <deckId>.json 的形式持久化到磁盘。
-     * @param name 用户可见的牌组名称，不能为空，且不能与已有牌组重名。
+     * 创建时去除名称首尾空白，拒绝空名称和重名，并生成独立 deckId 作为文件名。
+     * @param name 用户可见的牌组名称，处理后不能为空，且不能与已有牌组重名。
      * @return 创建内存对象并写入磁盘成功时返回 true，否则返回 false。
      */
     bool createDeck(const QString& name);
 
     /**
      * @brief 根据牌组名称删除牌组，并移除对应的 JSON 文件。
+     * 删除时去除输入名称首尾空白，并在删除磁盘文件成功后再移除内存对象。
+     * 已经更改为：若对应磁盘文件已不存在，也会移除内存中的牌组残留并视为删除成功。
      * @param deckName 已存在的用户可见牌组名称。
      * @return 内存状态和磁盘状态均更新成功时返回 true，否则返回 false。
      */
@@ -37,8 +40,10 @@ public:
 
     /**
      * @brief 重命名已有牌组，保留原 deckId 和 JSON 文件路径。
+     * 重命名时去除两个输入名称的首尾空白；新名称与原名称相同时直接视为成功。
+     * 写入磁盘失败时恢复原名称，确保内存状态不提前改变。
      * @param deckName 当前用户可见牌组名称。
-     * @param newName 新的用户可见牌组名称，不能为空，且不能与已有牌组重名。
+     * @param newName 新的用户可见牌组名称，处理后不能为空，且不能与已有牌组重名。
      * @return 重命名结果成功写入磁盘时返回 true，否则返回 false。
      */
     bool renameDeck(const QString& deckName, const QString& newName);
