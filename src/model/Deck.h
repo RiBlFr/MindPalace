@@ -28,8 +28,6 @@ namespace MindPalace::Model {
         // ==========================================
         QString deckId;
         QString deckName;
-        //新增属性by zhy,作用同于cardId,并且在tojson()和fromjson()中将其加入/读出json文件
-        QString deckId;
 
         std::vector<std::unique_ptr<Card>> cards;
 
