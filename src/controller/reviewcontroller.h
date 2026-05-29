@@ -37,6 +37,7 @@ public:
      * @param deck 待复习的牌组。复习过程中会直接修改其中的卡片状态。
      * @param deckFilePath 该牌组对应的 JSON 文件路径，用于评分后立即保存。
      * @return 存在可复习卡片时返回 true；没有到期卡片或参数无效时返回 false。
+     * 成功进入提问态时，会立即触发 signal_showQuestion() 广播第一张卡片正面文本。
      * 注意：需要deckFilePath是因为想把deckcontroller 和 reviewcontroller分开
      * 可以从reviewcontroller.h得到filepath
      */
@@ -63,6 +64,8 @@ public:
      * @brief 提交当前卡片的复习反馈，更新 SM-2 参数并保存牌组。
      * @param feedback 用户选择的复习反馈。
      * @return 评分处理并保存成功时返回 true；保存失败或当前状态不可评分时返回 false。（此时会回滚card状态）
+     * 保存成功后若仍有下一张卡片，会切回提问态并触发 signal_showQuestion()；
+     * 若本次队列自然完成，会切入 FinishedState 并触发 signal_reviewFinished()，但保留 activeDeck 等会话上下文。
      */
     bool submitFeedback(ReviewFeedback feedback);
 
@@ -84,23 +87,24 @@ public:
 signals:
     // ==========================================
     // 【新增区】状态机向外界（总指挥）广播的核心事件
+    // modified by zhy: 信号只表达状态机事件，不直接规定 View 层具体 UI 行为。
     // ==========================================
 
     /**
-     * @brief 当状态机切入“提问态”时触发
-     * 附带当前卡片的正面文字，通知外部进行 UI 渲染
+     * @brief 当状态机切入“提问态”时触发。
+     * 附带当前卡片的正面文字；外部协调者可据此驱动 View 渲染提问态。
      */
     void signal_showQuestion(const QString& frontText);
 
     /**
-     * @brief 当状态机切入“答案态”时触发
-     * 附带当前卡片的背面文字，通知外部揭晓答案并显示评分按钮
+     * @brief 当状态机切入“答案态”时触发。
+     * 附带当前卡片的背面文字；外部协调者可据此驱动 View 渲染答案态。
      */
     void signal_showAnswer(const QString& backText);
 
     /**
-     * @brief 当复习队列被彻底清空时触发
-     * 通知外部今日学习任务圆满结束，可切换至结算大图章页面
+     * @brief 当复习队列被彻底清空或复习流程结束时触发。
+     * 外部协调者可据此驱动 View 渲染复习完成状态。
      */
     void signal_reviewFinished();
 
