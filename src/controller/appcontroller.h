@@ -45,6 +45,7 @@ namespace MindPalace::Controller {
         std::unique_ptr<DeckController> m_deckController;
         std::unique_ptr<ReviewController> m_reviewController;
         std::unique_ptr<MainWindow> m_mainWindow;
+        QString m_decksDirPath;
 
         // ==========================================
         // 2. 初始化流水线
@@ -58,18 +59,13 @@ namespace MindPalace::Controller {
         void setupGlobalConnections();
 
     private slots:
-        // ==========================================
-        // 3. 顶层业务路由槽函数
-        // ==========================================
-
-        // 路由：用户在主界面点击“进入学习” -> 启动复习状态机
         void handleStartReview(const QString& deckName);
-
-        // 路由：用户在复习时点击了 1~4 评分 -> 转发给算法引擎 -> 通知界面刷新
         void handleSubmitFeedback(int quality);
-
-        // 路由：程序即将被关闭 -> 触发安全落盘
+        void handleResetDeck(const QString& deckName);
         void handleAppQuit();
+
+    private:
+        void refreshDeckList();
     };
 
 } // namespace MindPalace::Controller

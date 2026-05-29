@@ -24,10 +24,12 @@
 #include <QJsonObject>
 #include <QVariant>
 #include <QQmlContext>
+#include <QQmlEngine>
 
 #include "StyleUtils.h"
 
 #include <QCloseEvent>
+#include <QShortcut>
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -40,21 +42,40 @@ MainWindow::MainWindow(QWidget *parent)
 
     initUI();
 
-    // 1. 监听左侧牌组列表的点击事件
+    // 1. 左侧牌组列表点击 → 开始复习 + 激活重置按钮
     connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {
+        resetDeckBtn->setEnabled(!text.isEmpty());
         if (!text.isEmpty()) {
-            emit signal_requestStartReview(text); // 转发为全局业务请求
+            emit signal_requestStartReview(text);
         }
     });
 
-    // 2. 绑定中央看板底部的 4 个评分按钮 (生疏、困难、良好、简单)
-    // 对应枚举值：Again=0, Hard=3, Good=4, Easy=5
-    int qualityMapping[4] = {0, 3, 4, 5};
+    // 2. 4 个评分按钮，对应枚举值 Again=0, Hard=3, Good=4, Easy=5
+    const int qualityMapping[4] = {0, 3, 4, 5};
     for (int i = 0; i < 4; ++i) {
         connect(feedbackBtns[i], &QPushButton::clicked, this, [this, q = qualityMapping[i]]() {
-            emit signal_requestSubmitFeedback(q); // 优雅地把按钮点击转换为带参数的业务信号
+            emit signal_requestSubmitFeedback(q);
         });
     }
+
+    // 3. "显示答案"按钮 + 空格键 → 翻牌（仅当问题态按钮可见时生效）
+    auto flipCard = [this]() {
+        if (showAnswerBtn->isVisible()) {
+            if (auto *root = flashCardView->rootObject()) {
+                root->setProperty("flipped", true);
+            }
+        }
+    };
+    connect(showAnswerBtn, &QPushButton::clicked, this, flipCard);
+    auto *spaceKey = new QShortcut(Qt::Key_Space, this);
+    connect(spaceKey, &QShortcut::activated, this, flipCard);
+
+    // 4. 重置卡组按钮
+    connect(resetDeckBtn, &QPushButton::clicked, this, [this]() {
+        if (auto *item = deckListWidget->currentItem()) {
+            emit signal_requestResetDeck(item->text());
+        }
+    });
 
     setupStyles();
 }
@@ -72,29 +93,47 @@ void MainWindow::updateDeckListView(const std::vector<QString>& deckNames) const
     }
 }
 
-void MainWindow::renderQuestionLayout(const QString& frontText) const {
-    // 1. 将正面文字更新到 QQuickWidget 内部或者相应的 QLabel 中
-    flashCardView->setProperty("questionText", frontText);
+void MainWindow::renderQuestionLayout(const QString& frontText, bool hasNextCard) const {
+    if (auto *root = flashCardView->rootObject()) {
+        root->setProperty("hasNextCard", hasNextCard);
+        root->setProperty("questionText", frontText);
+        root->setProperty("answerText", QString());
+    }
+    showAnswerBtn->show();
+    feedbackRow->hide();
+}
 
-    // 2. 处于提问态时，用户还没想出答案，决不能给他们评分的机会
-    for (int i = 0; i < 4; ++i) {
-        feedbackBtns[i]->hide();
+void MainWindow::preloadAnswerText(const QString& backText) {
+    if (auto *root = flashCardView->rootObject()) {
+        root->setProperty("answerText", backText);
     }
 }
 
 void MainWindow::renderAnswerLayout(const QString& backText) {
-    // 1. 将背面文字追加更新到 UI
-    flashCardView->setProperty("answerText", backText);
-
-    // 2.
-    for (int i = 0; i < 4; ++i) {
-        feedbackBtns[i]->show();
+    if (auto *root = flashCardView->rootObject()) {
+        root->setProperty("answerText", backText);
     }
+    showAnswerBtn->hide();
+    feedbackRow->show();
 }
 
 void MainWindow::showFinishedSummaryPage() {
-    // 这里可以执行页面切换逻辑，比如用 QStackedWidget 切换到打卡成功的大图章界面
-    // 麻烦rzb同学后期补充一下~
+    if (auto *root = flashCardView->rootObject()) {
+        root->setProperty("hasNextCard", false);
+        root->setProperty("questionText", tr("今日复习全部完成！"));
+        root->setProperty("answerText", tr("所有卡片已复习完毕，明日再来~"));
+    }
+    showAnswerBtn->hide();
+    feedbackRow->hide();
+}
+
+void MainWindow::updateProgressView(int done, int total) {
+    progressLabel->setText(QString("%1 / %2").arg(done).arg(total));
+    dailyProgressBar->setMaximum(total > 0 ? total : 1);
+    dailyProgressBar->setValue(done);
+    todayStudyLabel->setText(
+        tr("已复习: %1 张\n待复习: %2 张").arg(done).arg(total - done)
+    );
 }
 
 MainWindow::~MainWindow() = default;
@@ -158,19 +197,20 @@ void MainWindow::setupLeftPanel() {
     deckListWidget->setFrameShape(QFrame::NoFrame);
     deckListWidget->setAlternatingRowColors(false);
 
-    deckListWidget->addItem(tr("GRE 词汇"));
-    deckListWidget->addItem(tr("日本語単語"));
-    deckListWidget->addItem(tr("编程语言概念"));
-    deckListWidget->addItem(tr("世界地理"));
-
     leftLayout->addWidget(deckListWidget, 1);
 
     addDeckBtn = new QPushButton(tr("+ 新增卡组"));
     addDeckBtn->setProperty("variant", "primary");
     addDeckBtn->setMinimumHeight(40);
     setButtonFont(addDeckBtn, 11);
-
     leftLayout->addWidget(addDeckBtn);
+
+    resetDeckBtn = new QPushButton(tr("重置卡组进度"));
+    resetDeckBtn->setProperty("variant", "warning");
+    resetDeckBtn->setMinimumHeight(40);
+    setButtonFont(resetDeckBtn, 11);
+    resetDeckBtn->setEnabled(false);
+    leftLayout->addWidget(resetDeckBtn);
 }
 
 void MainWindow::setupCenterPanel() {
@@ -184,8 +224,18 @@ void MainWindow::setupCenterPanel() {
     initFlashCardView();
     centerLayout->addWidget(flashCardView, 1);
 
-    auto *feedbackLayout = setupFeedbackButtons();
-    centerLayout->addLayout(feedbackLayout);
+    // 问题态：大的"显示答案"按钮，与评分行互斥显示
+    showAnswerBtn = new QPushButton(tr("显示答案  （空格键）"));
+    showAnswerBtn->setProperty("variant", "primary");
+    showAnswerBtn->setMinimumHeight(62);
+    setButtonFont(showAnswerBtn, 13);
+    showAnswerBtn->hide();
+    centerLayout->addWidget(showAnswerBtn);
+
+    // 答案态：4 个评分按钮，包在一个容器里方便整体 show/hide
+    feedbackRow = setupFeedbackButtons();
+    feedbackRow->hide();
+    centerLayout->addWidget(feedbackRow);
 }
 
 void MainWindow::initFlashCardView() {
@@ -193,67 +243,35 @@ void MainWindow::initFlashCardView() {
     flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
     flashCardView->setClearColor(Qt::transparent);
     flashCardView->setMinimumHeight(420);
-    QJsonArray cards;
 
-    auto appendCard = [&cards](const QString &front, const QString &back) {
-        QJsonObject card;
-        card.insert(QStringLiteral("front"), front);
-        card.insert(QStringLiteral("back"), back);
-        cards.append(card);
-    };
+    // Expose this MainWindow to QML as "_reviewBridge" so FlashCardStack can
+    // call notifyCardFlipped() directly. This must happen before setSource()
+    // so the property is available when the QML component initialises.
+    flashCardView->engine()->rootContext()->setContextProperty(
+        QStringLiteral("_reviewBridge"), this);
 
-    appendCard(
-            tr("C++ RAII 是什么？"),
-            tr("Resource Acquisition Is Initialization：把资源生命周期绑定到对象生命周期，构造获取，析构释放。")
-    );
-
-    appendCard(
-            tr("SM-2 算法中的 EF 代表什么？"),
-            tr("Easiness Factor，表示卡片对学习者的难易权重，会影响下一次复习间隔。")
-    );
-
-    appendCard(
-            tr("Qt 信号槽适合解决什么问题？"),
-            tr("用于对象之间的松耦合通信，发送方不需要知道接收方的具体实现。")
-    );
-
-    appendCard(
-            tr("被动视图 Passive View 的核心思想是什么？"),
-            tr("View 只负责展示与上报事件，业务状态和流程由 Controller / Presenter 管理。")
-    );
-
-    flashCardCount = cards.size();
-    currentFlashCardIndex = 0;
-
-    const QString cardsJson = QString::fromUtf8(
-            QJsonDocument(cards).toJson(QJsonDocument::Compact)
-    );
-
-    qWarning() << "C++ cardsJson =" << cardsJson;
-
-    flashCardView->rootContext()->setContextProperty(QStringLiteral("cardsJson"), cardsJson);
     flashCardView->setSource(QUrl(QStringLiteral("qrc:/styles/FlashCardStack.qml")));
 
     if (auto *root = flashCardView->rootObject()) {
-        qWarning() << "QML root loaded:" << root << root->metaObject()->className();
-
-        root->setProperty("cardsJsonInternal", cardsJson);
-        QMetaObject::invokeMethod(root, "loadCardsFromJson", Qt::DirectConnection);
-
-        root->setProperty("currentIndex", currentFlashCardIndex);
-        root->setProperty("requestedIndex", currentFlashCardIndex);
-        root->setProperty("nextRequest", 0);
-        root->setProperty("flipped", false);
-
-        qWarning() << "cardCount after load =" << root->property("cardCount").toInt();
+        root->setProperty("questionText", tr("从左侧选择卡组开始学习"));
     } else {
-        qWarning() << "FlashCardStack rootObject is null";
+        qWarning() << "FlashCardStack rootObject is null — QML failed to load";
     }
 }
 
-QHBoxLayout* MainWindow::setupFeedbackButtons() {
-    auto *feedbackLayout = new QHBoxLayout;
-    feedbackLayout->setSpacing(12);
+void MainWindow::onQmlFlippedPropertyChanged() {
+    // Kept as a fallback slot; actual notification goes through notifyCardFlipped().
+}
+
+void MainWindow::notifyCardFlipped(bool flipped) {
+    if (flipped) emit signal_requestShowAnswer();
+}
+
+QWidget* MainWindow::setupFeedbackButtons() {
+    auto *row = new QWidget;
+    auto *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(12);
 
     const QStringList feedbackTexts = {
             tr("忘记\n(F1)"),
@@ -274,39 +292,11 @@ QHBoxLayout* MainWindow::setupFeedbackButtons() {
         feedbackBtns[i]->setProperty("variant", variants[i]);
         feedbackBtns[i]->setMinimumHeight(62);
         setButtonFont(feedbackBtns[i], 11);
-
-        connect(feedbackBtns[i], &QPushButton::clicked,
-                this, &MainWindow::showNextFlashCard);
-
-        feedbackLayout->addWidget(feedbackBtns[i]);
+        layout->addWidget(feedbackBtns[i]);
     }
 
-    return feedbackLayout;
+    return row;
 }
-
-void MainWindow::showNextFlashCard() {
-    if (!flashCardView) {
-        return;
-    }
-
-    QObject *root = flashCardView->rootObject();
-    if (!root) {
-        qWarning() << "Flash card QML root object is null.";
-        return;
-    }
-
-    if (root->property("switching").toBool()) {
-        return;
-    }
-
-    const int currentIndex = root->property("currentIndex").toInt();
-    const int nextIndex = currentIndex + 1;
-    qWarning() << "Switch flash card:" << currentIndex << "->" << nextIndex;
-
-    root->setProperty("requestedIndex", nextIndex);
-}
-
-
 
 void MainWindow::setupRightPanel() {
     rightPanel = new QWidget;

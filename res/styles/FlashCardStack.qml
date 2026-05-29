@@ -16,6 +16,25 @@ Item {
     readonly property real nextScaleMin: root.nextScaleBase - 0.03
     readonly property real maxRotation: Math.min(2.5, root.stackPad * 0.045)
 
+    // C++ 侧驱动属性：设置 questionText 会重置卡片并显示正面；
+    // 设置 answerText 仅更新背面文字，不打断当前翻牌状态。
+    property string questionText: ""
+    property string answerText: ""
+
+    // Direct string properties for activeCard bindings.
+    // Using JS function bindings through ListModel.get() is unreliable because
+    // QML's dependency tracker does not follow property accesses on objects
+    // returned by ListModel.get(), so cardsModel.set() never re-triggers them.
+    property string currentFront: ""
+    property string currentBack: ""
+
+    // Set to true from C++ when there is at least one more card after the current one.
+    // Controls whether the background "next card" in the stack is rendered.
+    property bool hasNextCard: false
+
+    // 卡片从正面翻到背面时通知 C++，用于触发 ReviewController::showAnswer()
+    signal cardFlippedToBack()
+
     property string cardsJsonInternal: ""
 
     Binding {
@@ -41,6 +60,45 @@ Item {
 
     signal cardChanged(int currentIndex, int cardCount)
 
+    // C++ 设置新题目：重置卡片状态，直接更新 currentFront/currentBack
+    onQuestionTextChanged: {
+        if (questionText.length === 0) return
+        currentFront = questionText
+        currentBack = ""
+        cardsModel.clear()
+        cardsModel.append({"front": questionText, "back": ""})
+        // Add a placeholder second card so the stack shadow renders when there are more cards.
+        if (hasNextCard) {
+            cardsModel.append({"front": "", "back": ""})
+        }
+        currentIndex = 0
+        pendingIndex = 0
+        requestedIndex = 0
+        flipped = false
+        switching = false
+        switchPhase = 0
+    }
+
+    // C++ 揭示答案：直接更新 currentBack，同时保持 cardsModel 同步
+    onAnswerTextChanged: {
+        currentBack = answerText
+        if (cardsModel.count > 0) {
+            cardsModel.set(0, {"back": answerText})
+        }
+    }
+
+    // 每次从正面翻到背面时通知 C++
+    onFlippedChanged: {
+        if (flipped) {
+            cardFlippedToBack()
+            // Direct call into C++ via context property — this is the reliable path.
+            // SIGNAL() macro connections to QML-generated signals are fragile in Qt6 QQuickWidget.
+            if (typeof _reviewBridge !== "undefined") {
+                _reviewBridge.notifyCardFlipped(true)
+            }
+        }
+    }
+
     // Always show a newly selected card with its front side.
     onCurrentIndexChanged: {
         flipped = false
@@ -50,8 +108,8 @@ Item {
         id: cardsModel
 
         ListElement {
-            front: "正面\n\n点击卡片查看答案"
-            back: "反面\n\n这里显示答案、解释或例句"
+            front: "从左侧选择卡组开始学习"
+            back: ""
         }
     }
 
@@ -234,7 +292,7 @@ Item {
             y: root.backCardShiftY * (1 - root.switchPhase)
             scale: root.nextScaleMin + root.switchPhase * (1.0 - root.nextScaleMin)
             rotation: -root.maxRotation + root.switchPhase * root.maxRotation
-            opacity: (root.cardCount > 1 && root.minSide >= root.showBackCardThreshold)
+            opacity: (root.hasNextCard && root.minSide >= root.showBackCardThreshold)
                 ? (root.switching ? (0.55 + root.switchPhase * 0.45) : (0.35 * root.bgFadeInPhase))
                 : 0.0
             z: 1
@@ -268,8 +326,8 @@ Item {
                 id: activeCard
 
                 anchors.fill: parent
-                frontText: root.frontAt(root.currentIndex)
-                backText: root.backAt(root.currentIndex)
+                frontText: root.currentFront
+                backText: root.currentBack
                 flipped: root.flipped
 
                 bodyOffsetX: root.backCardBodyOffsetX * root.switchPhase

@@ -1,11 +1,11 @@
 #include <QApplication>
-#include "view/MainWindow.h"
+#include "controller/appcontroller.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
-    MainWindow window;
-    window.show();
+    MindPalace::Controller::AppController appController;
+    appController.start();
 
     return QApplication::exec();
 }

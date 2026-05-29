@@ -28,6 +28,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         QuickWidgets
         Quick
         Qml
+        Test
 )
 
 include_directories(src)
@@ -50,6 +51,36 @@ target_link_libraries(MindPalace PRIVATE
         Qt6::QuickWidgets
         Qt6::Quick
         Qt6::Qml
+)
+
+enable_testing()
+
+set(DECK_CONTROLLER_TEST_SOURCES
+        tests/TestDeckController.cpp
+        src/controller/deckcontroller.cpp
+        src/controller/deckcontroller.h
+        src/model/Deck.cpp
+        src/model/Deck.h
+        src/model/Card.cpp
+        src/model/Card.h
+        src/service/storagemanager.cpp
+        src/service/storagemanager.h
+)
+
+add_executable(TestDeckController ${DECK_CONTROLLER_TEST_SOURCES})
+target_link_libraries(TestDeckController PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+target_include_directories(TestDeckController PRIVATE src)
+
+add_test(NAME DeckControllerTest COMMAND TestDeckController)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/data"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/data"
+        COMMENT "Syncing data/ to build output..."
 )
 
 if (WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
@@ -75,6 +106,11 @@ if (WIN32 AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
                 --qmldir "${CMAKE_SOURCE_DIR}/res/styles"
                 "$<TARGET_FILE:${PROJECT_NAME}>"
                 COMMENT "Deploying Qt runtime, plugins and QML dependencies..."
+        )
+        add_custom_command(TARGET TestDeckController POST_BUILD
+                COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+                "$<TARGET_FILE:TestDeckController>"
+                COMMENT "Deploying Qt runtime for TestDeckController..."
         )
     else()
         message(WARNING "windeployqt not found. You may need to deploy Qt DLLs and QML plugins manually.")
