@@ -30,6 +30,12 @@
 
 #include <QCloseEvent>
 #include <QShortcut>
+#include <QInputDialog>
+
+#include <QDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QDialogButtonBox>
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -42,10 +48,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     initUI();
 
-    // 1. 左侧牌组列表点击 → 开始复习 + 激活重置按钮
+    // 1. 左侧牌组列表点击 → 开始复习 + 激活重置与新增卡片按钮
     connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {
-        resetDeckBtn->setEnabled(!text.isEmpty());
-        if (!text.isEmpty()) {
+        bool hasSelection = !text.isEmpty();
+        resetDeckBtn->setEnabled(hasSelection);
+        addCardBtn->setEnabled(hasSelection); // 【新增这一句】同步激活/禁用新增卡片按钮
+
+        if (hasSelection) {
             emit signal_requestStartReview(text);
         }
     });
@@ -211,6 +220,65 @@ void MainWindow::setupLeftPanel() {
     setButtonFont(resetDeckBtn, 11);
     resetDeckBtn->setEnabled(false);
     leftLayout->addWidget(resetDeckBtn);
+
+    connect(addDeckBtn, &QPushButton::clicked, this, [this]() {
+    bool ok;
+    QString newDeckName = QInputDialog::getText(this, "新建牌组",
+                                         "请输入新牌组的名称:", QLineEdit::Normal,
+                                         "", &ok);
+    // 如果用户点了确定，且名字不为空，就把信号发射给 AppController
+    if (ok && !newDeckName.trimmed().isEmpty()) {
+        emit signal_requestCreateDeck(newDeckName.trimmed());
+    }
+});
+    // ==========================================
+    // 【新增】实例化"新增卡片"按钮
+    // ==========================================
+    addCardBtn = new QPushButton(tr("+ 新增卡片"));
+    addCardBtn->setProperty("variant", "primary"); // 保持与新增卡组统一的主色调
+    addCardBtn->setMinimumHeight(40);
+    setButtonFont(addCardBtn, 11);
+    addCardBtn->setEnabled(false); // 默认禁用，必须先选中左侧某个卡组才能添加卡片
+    leftLayout->addWidget(addCardBtn);
+
+    // 绑定点击事件：弹出一个带有两个输入框的自定义小窗口
+    connect(addCardBtn, &QPushButton::clicked, this, [this]() {
+        // 安全检查：确认当前确实有选中的牌组
+        auto *currentItem = deckListWidget->currentItem();
+        if (!currentItem) return;
+        QString currentDeckName = currentItem->text();
+
+        // 临时构建一个弹窗 (Dialog)
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("新增卡片 - ") + currentDeckName);
+        dialog.setMinimumWidth(300);
+
+        auto *formLayout = new QFormLayout(&dialog);
+
+        // 创建正反面输入框
+        auto *frontEdit = new QLineEdit(&dialog);
+        auto *backEdit = new QLineEdit(&dialog);
+        formLayout->addRow(tr("正面 (问题):"), frontEdit);
+        formLayout->addRow(tr("背面 (答案):"), backEdit);
+
+        // 创建底部的确认和取消按钮
+        auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        formLayout->addRow(btnBox);
+
+        connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        // 阻塞等待用户操作。如果用户点击了"确定"：
+        if (dialog.exec() == QDialog::Accepted) {
+            QString frontText = frontEdit->text().trimmed();
+            QString backText = backEdit->text().trimmed();
+
+            // 确保两面都填了内容再发信号
+            if (!frontText.isEmpty() && !backText.isEmpty()) {
+                emit signal_requestAddCard(currentDeckName, frontText, backText);
+            }
+        }
+    });
 }
 
 void MainWindow::setupCenterPanel() {
