@@ -60,6 +60,11 @@ public:
      */
     bool resetDeck(const QString& deckName);
 
+    /**
+     * @brief 向指定牌组添加一张新卡片并立刻落盘
+     */
+    bool addCardToDeck(const QString& deckName, const QString& front, const QString& back);
+
 signals:
     // ==========================================
     // 【新增区】对外广播的信号器官

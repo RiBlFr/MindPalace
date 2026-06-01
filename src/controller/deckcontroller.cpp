@@ -171,6 +171,42 @@ bool DeckController::resetDeck(const QString& deckName) {
     return Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId));
 }
 
+bool DeckController::addCardToDeck(const QString& deckName, const QString& front, const QString& back) {
+    // 1. 在内存中找到目标牌组
+    Model::Deck* deck = findDeckByName(deckName);
+    if (!deck) {
+        qWarning() << "addCardToDeck failed: 找不到目标牌组:" << deckName;
+        return false;
+    }
+
+    // 2. 实例化一张新卡片 (使用 make_unique 创建独占指针)
+    auto newCard = std::make_unique<Model::Card>();
+    newCard->front = front;
+    newCard->back = back;
+
+    // 3. 赋予 SM-2 算法的初始状态
+    newCard->repetitions = 0;
+    newCard->interval = 0.0f;
+    newCard->easeFactor = 2.5f;
+    const QDate today = QDate::currentDate();
+    newCard->lastReviewed = today;
+    newCard->nextReviewDate = today;
+
+    // 4. 将卡片压入内存中的牌组列表 (必须使用 std::move 转移所有权！)
+    deck->cards.push_back(std::move(newCard));
+
+    // 5. 触发 StorageManager 进行持久化落盘
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        // 如果落盘失败，必须进行内存回滚，保证内存与硬盘一致！
+        deck->cards.pop_back();
+        qWarning() << "addCardToDeck failed: 文件保存失败，已回滚内存状态。原因:" << error.message;
+        return false;
+    }
+
+    return true;
+}
+
 Model::Deck* DeckController::findDeckByName(const QString& deckName) {
     if (deckName.isEmpty()) {
         return nullptr;
@@ -214,5 +250,4 @@ QString DeckController::deckFilePath(const QString& deckId) const {
 
     return QDir(decksDirPath).filePath(deckId + ".json");
 }
-
 } // namespace MindPalace::Controller

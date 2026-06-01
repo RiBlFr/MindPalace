@@ -85,6 +85,8 @@ signals:
     void signal_requestShowAnswer();
     void signal_requestResetDeck(const QString& deckName);
     void signal_appWillClose();
+    void signal_requestCreateDeck(const QString& deckName);
+    void signal_requestAddCard(const QString& deckName, const QString& front, const QString& back);
 
 private slots:
     // Monitors QML's "flipped" property change to emit signal_requestShowAnswer.
@@ -102,6 +104,8 @@ private:
     QListWidget *deckListWidget{};
     QPushButton *addDeckBtn{};
     QPushButton *resetDeckBtn{};
+
+    QPushButton *addCardBtn{};
 
     // ===== 中央看板区 =====
     QWidget *centerPanel{};

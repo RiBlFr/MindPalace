@@ -139,6 +139,45 @@ void AppController::setupGlobalConnections() {
 
     // 初始化时立即填充一次牌组列表
     refreshDeckList();
+
+    // ---------------------------------------------------------------------
+    // 链接 B：牌组管理动作路由
+    // ---------------------------------------------------------------------
+
+    // 当用户在主界面输入新牌组名称并点击确认时，路由到 DeckController 执行底层创建逻辑
+    connect(m_mainWindow.get(), &MainWindow::signal_requestCreateDeck,
+            this, [this](const QString& deckName) {
+                qDebug() << "AppController 业务触发: 用户请求新建牌组 ->" << deckName;
+
+                // 驱动底层模型去执行真正的磁盘写入和排重逻辑
+                bool success = m_deckController->createDeck(deckName);
+
+                if (success) {
+                    qDebug() << "AppController: 新牌组创建成功！已落盘保存。";
+                    // 底层 createDeck 成功后会自动发出 signal_deckListChanged，
+                    // UI 会因为我们之前写好的刷新逻辑自动更新，这里无需额外写代码。
+                } else {
+                    qWarning() << "AppController 异常拦截: 牌组创建失败 (可能因重名或非法字符) ->" << deckName;
+                }
+            });
+
+    // 当用户在微型表单弹窗中点击确认时，路由到底层执行添加逻辑
+    connect(m_mainWindow.get(), &MainWindow::signal_requestAddCard,
+            this, [this](const QString& deckName, const QString& front, const QString& back) {
+                qDebug() << "AppController 业务触发: 收到为牌组 [" << deckName << "] 新增卡片的请求";
+
+                // 驱动底层模型去执行真实的内存追加和磁盘写入
+                bool success = m_deckController->addCardToDeck(deckName, front, back);
+
+                if (success) {
+                    qDebug() << "AppController: 新卡片落盘成功！";
+
+                    // 可选扩展：在这里你可以考虑发射一个信号，
+                    // 重新统计一下该牌组的总卡片数，并刷新右侧面板的“总体统计”数据。
+                } else {
+                    qWarning() << "AppController 异常拦截: 卡片添加失败，可能是磁盘写入异常。";
+                }
+            });
 }
 
 void AppController::refreshDeckList() {
