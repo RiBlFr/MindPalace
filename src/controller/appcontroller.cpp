@@ -234,6 +234,12 @@ void AppController::refreshDeckList() {
 void AppController::handleStartReview(const QString& deckName) {
     qDebug() << "AppController 业务触发: 用户请求进入牌组学习 ->" << deckName;
 
+    // 记录当前正在复习的牌组名称
+    m_currentReviewingDeckName = deckName;
+
+    auto stats = m_deckController->getDeckStats(deckName);
+    m_mainWindow->updateSummaryStats(stats.totalCards, stats.masteryRate, stats.totalReviews);
+
     // 1. 跨模块检索目标牌组对象
     Model::Deck* targetDeck = nullptr;
 
@@ -254,7 +260,7 @@ void AppController::handleStartReview(const QString& deckName) {
     // 文件路径从已解析的目录构建，与 initializeControllers 保持一致
     QString targetFilePath = QDir(m_decksDirPath).filePath(targetDeck->deckId + ".json");
 
-    // 3. 为复习状态机注入数据源并宣告开启复习轮询
+    // 3. 为复习状态机注入数据源并宣告开启复习轮询.
     bool hasDueCards = m_reviewController->startReview(targetDeck, targetFilePath);
 
     if (hasDueCards) {
@@ -286,6 +292,11 @@ void AppController::handleSubmitFeedback(int quality) {
 
     if (!saveResult) {
         qCritical() << "AppController 核心灾难: 闪卡参数更新或本地 JSON 文件原子化落盘失败！状态已回滚。";
+    }
+
+    if (!m_currentReviewingDeckName.isEmpty()) {
+        auto stats = m_deckController->getDeckStats(m_currentReviewingDeckName);
+        m_mainWindow->updateSummaryStats(stats.totalCards, stats.masteryRate, stats.totalReviews);
     }
 }
 

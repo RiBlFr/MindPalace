@@ -40,12 +40,15 @@ namespace MindPalace::Controller {
 
     private:
         // ==========================================
-        // 1. 核心组件托管区 (RAII)
+        // 1. 核心组件托管区 (RAII).
         // ==========================================
         std::unique_ptr<DeckController> m_deckController;
         std::unique_ptr<ReviewController> m_reviewController;
         std::unique_ptr<MainWindow> m_mainWindow;
         QString m_decksDirPath;
+
+        // 用于在复习期间记忆当前牌组的名称
+        QString m_currentReviewingDeckName;
 
         // ==========================================
         // 2. 初始化流水线
