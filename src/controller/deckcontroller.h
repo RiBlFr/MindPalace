@@ -14,7 +14,7 @@ class DeckController : public QObject {
 
 public:
     // ==========================================
-    // 【新增】数据统计专用结构体
+    // 【新增】数据统计专用结构体.
     // ==========================================
     struct DeckStats {
         int totalCards = 0;      // 总卡片数

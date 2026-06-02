@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     initUI();
 
-    // 1. 左侧牌组列表点击 → 开始复习 + 激活重置与新增卡片按钮
+    // 1. 左侧牌组列表点击 → 开始复习 + 激活重置与新增卡片按钮.
     connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {
         const bool hasSelection = !text.isEmpty();
         resetDeckBtn->setEnabled(hasSelection);

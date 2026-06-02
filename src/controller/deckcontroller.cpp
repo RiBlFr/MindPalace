@@ -454,7 +454,7 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
 
     const Model::Deck* deck = findDeckByName(deckName);
     if (!deck || deck->cards.empty()) {
-        return stats; // 如果牌组不存在或为空，直接返回 0 数据
+        return stats; // 如果牌组不存在或为空，.直接返回 0 数据
     }
 
     stats.totalCards = static_cast<int>(deck->cards.size());

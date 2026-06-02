@@ -260,7 +260,7 @@ void AppController::handleStartReview(const QString& deckName) {
     // 文件路径从已解析的目录构建，与 initializeControllers 保持一致
     QString targetFilePath = QDir(m_decksDirPath).filePath(targetDeck->deckId + ".json");
 
-    // 3. 为复习状态机注入数据源并宣告开启复习轮询
+    // 3. 为复习状态机注入数据源并宣告开启复习轮询.
     bool hasDueCards = m_reviewController->startReview(targetDeck, targetFilePath);
 
     if (hasDueCards) {

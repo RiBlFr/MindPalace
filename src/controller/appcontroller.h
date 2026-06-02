@@ -40,7 +40,7 @@ namespace MindPalace::Controller {
 
     private:
         // ==========================================
-        // 1. 核心组件托管区 (RAII)
+        // 1. 核心组件托管区 (RAII).
         // ==========================================
         std::unique_ptr<DeckController> m_deckController;
         std::unique_ptr<ReviewController> m_reviewController;
