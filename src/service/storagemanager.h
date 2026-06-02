@@ -51,6 +51,21 @@ namespace MindPalace::Service {
         * @param deck 要赋值的牌堆
         * @return true:成功读取； false: 失败，并会打印原因
         */
+
+        // ==========================================
+        // 【新增】每日复习流水日志 API
+        // ==========================================
+        /**
+         * @brief 给今天的复习数量 +1，并自动落盘
+         */
+        static void incrementDailyReviewCount();
+
+        /**
+         * @brief 获取过去 7 天的复习数据，用于 UI 图表渲染
+         * @param outData 输出的 7 天数据数组 (例如 [12, 0, 5, ...])
+         * @param outLabels 输出的 7 天横坐标标签 (例如 ["周四", "周五", ... "今"])
+         */
+        static void getWeeklyReviewData(std::vector<int>& outData, QStringList& outLabels);
     };
 
 } // namespace MindPalace::Service
