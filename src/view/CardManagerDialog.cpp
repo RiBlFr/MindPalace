@@ -1,5 +1,6 @@
 #include "CardManagerDialog.h"
 
+#include <QAction>
 #include <QColor>
 #include <QDebug>
 #include <QFile>
@@ -7,10 +8,14 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
+#include <QPoint>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QVBoxLayout>
+
+#include "StyledDialogs.h"
 
 CardManagerDialog::CardManagerDialog(const QString& deckName,
                                      const std::vector<CardDisplayInfo>& cards,
@@ -93,6 +98,9 @@ void CardManagerDialog::buildUi(const std::vector<CardDisplayInfo>& cards) {
     m_table->setAlternatingRowColors(true);
     m_table->setFocusPolicy(Qt::NoFocus);
     m_table->setFrameShape(QFrame::NoFrame);
+    m_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_table, &QTableWidget::customContextMenuRequested,
+            this, &CardManagerDialog::showTableContextMenu);
 
     for (const auto& card : cards) {
         appendCardRow(card, /*pendingSave=*/false);
@@ -120,6 +128,8 @@ void CardManagerDialog::appendCardRow(const CardDisplayInfo& card, bool pendingS
     auto *backItem  = new QTableWidgetItem(card.back);
     frontItem->setToolTip(card.front);
     backItem->setToolTip(card.back);
+    // 把 cardId 绑在 0 列 item 的 UserRole 上，方便右键菜单按行检索
+    frontItem->setData(Qt::UserRole, card.id);
     m_table->setItem(row, 0, frontItem);
     m_table->setItem(row, 1, backItem);
 
@@ -200,4 +210,57 @@ void CardManagerDialog::refreshSubtitle() {
     if (m_subtitle && m_table) {
         m_subtitle->setText(tr("共 %1 张卡片").arg(m_table->rowCount()));
     }
+}
+
+void CardManagerDialog::showTableContextMenu(const QPoint& pos) {
+    if (!m_table) return;
+
+    const QModelIndex idx = m_table->indexAt(pos);
+    if (!idx.isValid()) return;
+    const int row = idx.row();
+
+    // 未落盘的新卡（pendingSave）UserRole 是空字符串，不允许编辑
+    auto *frontItem = m_table->item(row, 0);
+    if (!frontItem) return;
+    const QString cardId = frontItem->data(Qt::UserRole).toString();
+
+    QMenu menu(this);
+    auto *editAction = menu.addAction(tr("修改"));
+    if (cardId.isEmpty()) {
+        editAction->setEnabled(false);
+        editAction->setToolTip(tr("请关闭并重新打开本对话框后再修改该卡片"));
+    }
+
+    QAction* picked = menu.exec(m_table->viewport()->mapToGlobal(pos));
+    if (picked == editAction) {
+        editCardAtRow(row);
+    }
+}
+
+void CardManagerDialog::editCardAtRow(int row) {
+    if (!m_table || row < 0 || row >= m_table->rowCount()) return;
+
+    auto *frontItem = m_table->item(row, 0);
+    auto *backItem  = m_table->item(row, 1);
+    if (!frontItem || !backItem) return;
+
+    const QString cardId = frontItem->data(Qt::UserRole).toString();
+    if (cardId.isEmpty()) return;
+
+    auto edited = StyledDialogs::getCardPair(
+        this, tr("修改卡片"),
+        frontItem->text(), backItem->text());
+    if (!edited) return;
+
+    const QString newFront = edited->first;
+    const QString newBack  = edited->second;
+    if (newFront == frontItem->text() && newBack == backItem->text()) return;
+
+    // 前端即时反馈：先把表格行更新到新文本（与落盘并行）
+    frontItem->setText(newFront);
+    backItem->setText(newBack);
+    frontItem->setToolTip(newFront);
+    backItem->setToolTip(newBack);
+
+    emit signal_requestUpdateCard(m_deckName, cardId, newFront, newBack);
 }

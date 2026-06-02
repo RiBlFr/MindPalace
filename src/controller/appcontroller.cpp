@@ -191,6 +191,14 @@ void AppController::setupGlobalConnections() {
                     qWarning() << "AppController: deleteCardFromDeck failed for" << cardId;
             });
 
+    // 修改单张卡片：只改文本，不影响 SM-2 参数；不需要中止复习
+    connect(m_mainWindow.get(), &MainWindow::signal_requestUpdateCard,
+            this, [this](const QString& deckName, const QString& cardId,
+                         const QString& newFront, const QString& newBack) {
+                if (!m_deckController->updateCard(deckName, cardId, newFront, newBack))
+                    qWarning() << "AppController: updateCard failed for" << cardId;
+            });
+
     // 从 .in/.out 文件对导入牌组
     connect(m_mainWindow.get(), &MainWindow::signal_requestImportDeck,
             this, [this](const QString& filePath) {

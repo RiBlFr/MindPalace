@@ -330,6 +330,59 @@ QString DeckController::deckFilePath(const QString& deckId) const {
     return QDir(decksDirPath).filePath(deckId + ".json");
 }
 
+bool DeckController::updateCard(const QString& deckName, const QString& cardId,
+                                const QString& newFront, const QString& newBack) {
+    const QString cleanedDeckName = deckName.trimmed();
+    const QString cleanedCardId   = cardId.trimmed();
+    const QString cleanedFront    = newFront.trimmed();
+    const QString cleanedBack     = newBack.trimmed();
+
+    if (cleanedDeckName.isEmpty() || cleanedCardId.isEmpty()) {
+        qWarning() << "updateCard failed: deck name or card id is empty.";
+        return false;
+    }
+    if (cleanedFront.isEmpty() || cleanedBack.isEmpty()) {
+        qWarning() << "updateCard failed: front or back text is empty after trimming.";
+        return false;
+    }
+
+    Model::Deck* deck = findDeckByName(cleanedDeckName);
+    if (!deck) {
+        qWarning() << "updateCard failed: deck does not exist:" << cleanedDeckName;
+        return false;
+    }
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "updateCard failed: deck id is empty.";
+        return false;
+    }
+
+    auto cardIterator = std::find_if(deck->cards.begin(), deck->cards.end(),
+        [&cleanedCardId](const std::unique_ptr<Model::Card>& cardPtr) {
+            return cardPtr && cardPtr->id == cleanedCardId;
+        });
+    if (cardIterator == deck->cards.end()) {
+        qWarning() << "updateCard failed: card does not exist:" << cleanedCardId;
+        return false;
+    }
+
+    Model::Card* card = cardIterator->get();
+    const QString oldFront = card->front;
+    const QString oldBack  = card->back;
+    card->front = cleanedFront;
+    card->back  = cleanedBack;
+
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        card->front = oldFront;
+        card->back  = oldBack;
+        qWarning() << "updateCard failed: unable to save deck file:" << error.message;
+        return false;
+    }
+
+    emit signal_deckListChanged();
+    return true;
+}
+
 bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
     const QFileInfo inInfo(sourceFilePath);
     if (!inInfo.exists()) {

@@ -32,6 +32,8 @@ public:
 signals:
     void signal_requestDeleteCard(const QString& deckName, const QString& cardId);
     void signal_requestAddCard(const QString& deckName, const QString& front, const QString& back);
+    void signal_requestUpdateCard(const QString& deckName, const QString& cardId,
+                                  const QString& newFront, const QString& newBack);
 
 private:
     void buildUi(const std::vector<CardDisplayInfo>& cards);
@@ -40,6 +42,8 @@ private:
     void handleAddClicked();
     void confirmAndRemoveRow(const QString& cardId, const QString& frontText, QWidget* rowMarker);
     void refreshSubtitle();
+    void showTableContextMenu(const QPoint& pos);
+    void editCardAtRow(int row);
 
     QString       m_deckName;
     QLabel*       m_subtitle = nullptr;

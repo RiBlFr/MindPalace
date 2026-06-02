@@ -77,6 +77,65 @@ std::optional<QString> StyledDialogs::getText(QWidget* parent,
     return result;
 }
 
+std::optional<std::pair<QString, QString>> StyledDialogs::getCardPair(
+    QWidget* parent,
+    const QString& title,
+    const QString& initFront,
+    const QString& initBack) {
+    QDialog dialog(parent);
+    dialog.setObjectName("simpleDialog");
+    dialog.setWindowTitle(title);
+    dialog.setMinimumWidth(420);
+    applyStyleSheet(&dialog);
+
+    auto *root = new QVBoxLayout(&dialog);
+    root->setContentsMargins(24, 20, 24, 18);
+    root->setSpacing(12);
+
+    auto *frontLabel = new QLabel(trText("正面 (问题)"), &dialog);
+    frontLabel->setObjectName("dialogPrompt");
+    root->addWidget(frontLabel);
+    auto *frontEdit = new QLineEdit(&dialog);
+    frontEdit->setObjectName("dialogInput");
+    frontEdit->setText(initFront);
+    root->addWidget(frontEdit);
+
+    auto *backLabel = new QLabel(trText("背面 (答案)"), &dialog);
+    backLabel->setObjectName("dialogPrompt");
+    root->addWidget(backLabel);
+    auto *backEdit = new QLineEdit(&dialog);
+    backEdit->setObjectName("dialogInput");
+    backEdit->setText(initBack);
+    root->addWidget(backEdit);
+
+    auto *footer = new QHBoxLayout;
+    footer->setSpacing(10);
+    footer->addStretch();
+    auto *cancelBtn = new QPushButton(trText("取消"), &dialog);
+    cancelBtn->setObjectName("dialogSecondary");
+    cancelBtn->setCursor(Qt::PointingHandCursor);
+    auto *okBtn = new QPushButton(trText("保存"), &dialog);
+    okBtn->setObjectName("dialogPrimary");
+    okBtn->setCursor(Qt::PointingHandCursor);
+    okBtn->setDefault(true);
+    footer->addWidget(cancelBtn);
+    footer->addWidget(okBtn);
+    root->addLayout(footer);
+
+    QObject::connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
+    QObject::connect(okBtn,     &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    frontEdit->setFocus();
+    frontEdit->selectAll();
+
+    if (dialog.exec() != QDialog::Accepted) return std::nullopt;
+
+    const QString f = frontEdit->text().trimmed();
+    const QString b = backEdit->text().trimmed();
+    if (f.isEmpty() || b.isEmpty()) return std::nullopt;
+    return std::make_pair(f, b);
+}
+
 bool StyledDialogs::confirm(QWidget* parent,
                             const QString& title,
                             const QString& message,

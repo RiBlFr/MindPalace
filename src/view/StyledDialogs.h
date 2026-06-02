@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <optional>
+#include <utility>
 
 class QWidget;
 
@@ -32,6 +33,17 @@ bool confirm(QWidget* parent,
              const QString& title,
              const QString& message,
              bool dangerAction = false);
+
+/**
+ * @brief 弹出一个同时编辑正面/背面的对话框。
+ *        std::nullopt 表示用户取消或任一字段在 trim 后为空。
+ *        返回的 pair 中 first=正面、second=背面，均已 trimmed。
+ */
+std::optional<std::pair<QString, QString>> getCardPair(
+    QWidget* parent,
+    const QString& title,
+    const QString& initFront = {},
+    const QString& initBack  = {});
 
 } // namespace StyledDialogs
 

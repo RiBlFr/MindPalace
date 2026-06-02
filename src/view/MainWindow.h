@@ -99,6 +99,8 @@ signals:
     void signal_requestAddCard(const QString& deckName, const QString& front, const QString& back);
     void signal_requestManageCards(const QString& deckName);
     void signal_requestDeleteCard(const QString& deckName, const QString& cardId);
+    void signal_requestUpdateCard(const QString& deckName, const QString& cardId,
+                                  const QString& newFront, const QString& newBack);
     void signal_requestImportDeck(const QString& filePath);
     void signal_requestRefreshDeck(const QString& deckName);
 

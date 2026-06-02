@@ -74,8 +74,20 @@ public:
     bool deleteCardFromDeck(const QString& deckName, const QString& cardId);
 
     /**
+     * @brief 修改指定卡片的正反面文本并落盘。
+     * 不影响 SM-2 算法参数（ease/interval/lastReviewed/nextReviewDate）。
+     * @param deckName 卡片所在的卡组名称。
+     * @param cardId 卡片的唯一 ID。
+     * @param newFront 新的正面文本（trim 后必须非空）。
+     * @param newBack 新的背面文本（trim 后必须非空）。
+     * @return 修改并落盘成功返回 true；写盘失败时内存回滚到原值。
+     */
+    bool updateCard(const QString& deckName, const QString& cardId,
+                    const QString& newFront, const QString& newBack);
+
+    /**
      * @brief 从外部文件导入一个完整牌组。
-     * 具体导入格式、字段兼容策略、重名处理策略待后续确认。
+     * in-out格式，一行一个卡片，in中为正面，out为背面，文件名相同但后缀不同。
      * @param sourceFilePath 外部牌组文件路径。
      * @return 导入并写入本地牌组目录成功时返回 true，否则返回 false。
      */

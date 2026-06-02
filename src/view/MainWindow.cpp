@@ -451,11 +451,13 @@ void MainWindow::setupRightPanel() {
 void MainWindow::showCardManagerDialog(const QString& deckName,
                                        const std::vector<CardDisplayInfo>& cards) {
     CardManagerDialog dialog(deckName, cards, this);
-    // 把对话框内部的增删请求转发为 MainWindow 已有的信号，AppController 不感知 dialog 类型
+    // 把对话框内部的增/删/改请求转发为 MainWindow 已有的信号，AppController 不感知 dialog 类型
     connect(&dialog, &CardManagerDialog::signal_requestDeleteCard,
             this, &MainWindow::signal_requestDeleteCard);
     connect(&dialog, &CardManagerDialog::signal_requestAddCard,
             this, &MainWindow::signal_requestAddCard);
+    connect(&dialog, &CardManagerDialog::signal_requestUpdateCard,
+            this, &MainWindow::signal_requestUpdateCard);
     dialog.exec();
 }
 
