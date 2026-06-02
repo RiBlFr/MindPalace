@@ -33,7 +33,7 @@ find_package(Qt6 REQUIRED COMPONENTS
 
 include_directories(src)
 
-file(GLOB_RECURSE SOURCES
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "src/*.cpp"
         "src/*.h"
         "src/view/*.cpp"

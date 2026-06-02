@@ -1,0 +1,131 @@
+QDialog#cardManagerDialog {
+    background: #f7f8fb;
+}
+
+QLabel#headerTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+QLabel#headerSubtitle {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+QLabel#emptyHint {
+    color: #9ca3af;
+    font-size: 14px;
+    padding: 40px;
+}
+
+QLineEdit#addInput {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: #ffffff;
+    color: #1f2937;
+    min-height: 24px;
+    selection-background-color: #bfdbfe;
+}
+
+QLineEdit#addInput:focus {
+    border-color: #2563eb;
+}
+
+QPushButton#addCardBtn {
+    background: #2563eb;
+    color: #ffffff;
+    min-height: 32px;
+    padding: 4px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+QPushButton#addCardBtn:hover {
+    background: #1d4ed8;
+}
+
+QPushButton#addCardBtn:pressed {
+    padding: 4px 16px;
+}
+
+QTableWidget#cardTable {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    gridline-color: transparent;
+    selection-background-color: #eff6ff;
+    selection-color: #1d4ed8;
+    outline: none;
+}
+
+QTableWidget#cardTable::item {
+    padding: 10px 12px;
+    color: #334155;
+    border: none;
+}
+
+QTableWidget#cardTable::item:alternate {
+    background: #fafbfd;
+}
+
+QTableWidget#cardTable QHeaderView::section {
+    background: #f3f6fa;
+    color: #475569;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+
+QTableWidget#cardTable QHeaderView::section:first {
+    border-top-left-radius: 12px;
+}
+
+QTableWidget#cardTable QHeaderView::section:last {
+    border-top-right-radius: 12px;
+}
+
+QPushButton#rowDeleteBtn {
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+QPushButton#rowDeleteBtn:hover {
+    background: #fef2f2;
+    border-color: #ef4444;
+}
+
+QPushButton#rowDeleteBtn:pressed {
+    padding: 0;
+}
+
+QPushButton#rowDeleteBtn:disabled {
+    color: #cbd5e1;
+    border-color: #e5e7eb;
+}
+
+QPushButton#closeBtn {
+    min-height: 32px;
+    background: #ffffff;
+    color: #475569;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 22px;
+    font-weight: 600;
+}
+
+QPushButton#closeBtn:hover {
+    background: #f3f4f6;
+}
+
+QPushButton#closeBtn:pressed {
+    padding: 6px 22px;
+}

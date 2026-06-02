@@ -1,0 +1,87 @@
+QDialog#simpleDialog {
+    background: #ffffff;
+}
+
+QLabel#dialogPrompt {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    padding: 2px 0;
+}
+
+QLabel#dialogMessage {
+    font-size: 13px;
+    color: #475569;
+    padding: 2px 0;
+}
+
+QLineEdit#dialogInput {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #ffffff;
+    color: #1f2937;
+    min-height: 24px;
+    selection-background-color: #bfdbfe;
+}
+
+QLineEdit#dialogInput:focus {
+    border-color: #2563eb;
+}
+
+QPushButton#dialogPrimary {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-weight: 600;
+    min-height: 30px;
+    min-width: 84px;
+}
+
+QPushButton#dialogPrimary:hover {
+    background: #1d4ed8;
+}
+
+QPushButton#dialogPrimary:pressed {
+    padding: 6px 18px;
+}
+
+QPushButton#dialogSecondary {
+    background: #ffffff;
+    color: #475569;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-weight: 600;
+    min-height: 30px;
+    min-width: 84px;
+}
+
+QPushButton#dialogSecondary:hover {
+    background: #f3f4f6;
+}
+
+QPushButton#dialogSecondary:pressed {
+    padding: 6px 18px;
+}
+
+QPushButton#dialogDanger {
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-weight: 600;
+    min-height: 30px;
+    min-width: 84px;
+}
+
+QPushButton#dialogDanger:hover {
+    background: #dc2626;
+}
+
+QPushButton#dialogDanger:pressed {
+    padding: 6px 18px;
+}
