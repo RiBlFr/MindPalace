@@ -11,7 +11,7 @@ namespace MindPalace::Controller {
 
 class DeckController : public QObject {
     Q_OBJECT         // 【新增】Qt 元对象宏，告诉编译器这个类有信号和槽
-//
+
 public:
     // ==========================================
     // 【新增】数据统计专用结构体

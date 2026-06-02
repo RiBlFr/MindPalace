@@ -448,7 +448,6 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
     decks.push_back(std::move(deck));
     emit signal_deckListChanged();
     return true;
-}
     DeckController::DeckStats DeckController::getDeckStats(const QString& deckName) const {
     DeckStats stats; // 默认初始化，各项均为 0
 

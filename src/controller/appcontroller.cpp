@@ -299,7 +299,7 @@ void AppController::handleSubmitFeedback(int quality) {
         m_mainWindow->updateSummaryStats(stats.totalCards, stats.masteryRate, stats.totalReviews);
     }
 }
-//
+
 void AppController::handleResetDeck(const QString& deckName) {
     qDebug() << "AppController: 正在重置牌组进度 ->" << deckName;
 
