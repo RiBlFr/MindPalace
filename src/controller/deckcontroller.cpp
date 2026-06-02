@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QTextStream>
 #include <QUuid>
 
 #include <algorithm>
@@ -328,4 +329,72 @@ QString DeckController::deckFilePath(const QString& deckId) const {
 
     return QDir(decksDirPath).filePath(deckId + ".json");
 }
+
+bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
+    const QFileInfo inInfo(sourceFilePath);
+    if (!inInfo.exists()) {
+        qWarning() << "importDeckFromFile failed: .in file not found:" << sourceFilePath;
+        return false;
+    }
+
+    const QString outPath = inInfo.dir().filePath(inInfo.completeBaseName() + ".out");
+    if (!QFile::exists(outPath)) {
+        qWarning() << "importDeckFromFile failed: matching .out file not found:" << outPath;
+        return false;
+    }
+
+    QFile inFile(sourceFilePath);
+    QFile outFile(outPath);
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text) ||
+        !outFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "importDeckFromFile failed: unable to open file pair";
+        return false;
+    }
+
+    QTextStream inStream(&inFile);
+    QTextStream outStream(&outFile);
+    inStream.setEncoding(QStringConverter::Utf8);
+    outStream.setEncoding(QStringConverter::Utf8);
+
+    QStringList fronts, backs;
+    while (!inStream.atEnd()) fronts.append(inStream.readLine());
+    while (!outStream.atEnd()) backs.append(outStream.readLine());
+
+    if (fronts.isEmpty() || backs.isEmpty()) {
+        qWarning() << "importDeckFromFile failed: one or both files are empty";
+        return false;
+    }
+
+    const QString baseName = inInfo.completeBaseName();
+    QString uniqueName = baseName;
+    for (int n = 1; deckNameExists(uniqueName); ++n)
+        uniqueName = QString("%1 (%2)").arg(baseName).arg(n);
+
+    Model::Deck deck(uniqueName);
+    deck.deckId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    const int count = qMin(fronts.size(), backs.size());
+    for (int i = 0; i < count; ++i) {
+        const QString front = fronts[i].trimmed();
+        const QString back  = backs[i].trimmed();
+        if (front.isEmpty() && back.isEmpty()) continue;
+        deck.addCard(std::make_unique<Model::Card>(front, back));
+    }
+
+    if (deck.cards.empty()) {
+        qWarning() << "importDeckFromFile failed: no valid card pairs after parsing";
+        return false;
+    }
+
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(deck, deckFilePath(deck.deckId), &error)) {
+        qWarning() << "importDeckFromFile failed: unable to save deck:" << error.message;
+        return false;
+    }
+
+    decks.push_back(std::move(deck));
+    emit signal_deckListChanged();
+    return true;
+}
+
 } // namespace MindPalace::Controller

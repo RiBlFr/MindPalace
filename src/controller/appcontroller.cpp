@@ -79,7 +79,7 @@ void AppController::setupGlobalConnections() {
     // 链接 A：路由 View 层抛出的顶层用户动作（View -> AppController）
     // ---------------------------------------------------------------------
 
-    // 当用户在主界面的牌组卡片上点击“进入学习”时，路由到总控的 handleStartReview 槽函数
+    // 当用户在主界面的牌组卡片上点击"进入学习"时，路由到总控的 handleStartReview 槽函数
     connect(m_mainWindow.get(), &MainWindow::signal_requestStartReview,
             this, &AppController::handleStartReview);
 
@@ -164,19 +164,50 @@ void AppController::setupGlobalConnections() {
     // 当用户在微型表单弹窗中点击确认时，路由到底层执行添加逻辑
     connect(m_mainWindow.get(), &MainWindow::signal_requestAddCard,
             this, [this](const QString& deckName, const QString& front, const QString& back) {
-                qDebug() << "AppController 业务触发: 收到为牌组 [" << deckName << "] 新增卡片的请求";
+                if (!m_deckController->addCardToDeck(deckName, front, back))
+                    qWarning() << "AppController: addCardToDeck failed";
+            });
 
-                // 驱动底层模型去执行真实的内存追加和磁盘写入
-                bool success = m_deckController->addCardToDeck(deckName, front, back);
-
-                if (success) {
-                    qDebug() << "AppController: 新卡片落盘成功！";
-
-                    // 可选扩展：在这里你可以考虑发射一个信号，
-                    // 重新统计一下该牌组的总卡片数，并刷新右侧面板的“总体统计”数据。
-                } else {
-                    qWarning() << "AppController 异常拦截: 卡片添加失败，可能是磁盘写入异常。";
+    // 打开卡片管理对话框：从 DeckController 取出卡片列表传给 MainWindow
+    connect(m_mainWindow.get(), &MainWindow::signal_requestManageCards,
+            this, [this](const QString& deckName) {
+                std::vector<CardDisplayInfo> cards;
+                for (const auto& deck : m_deckController->getDecks()) {
+                    if (deck.deckName != deckName) continue;
+                    for (const auto& cardPtr : deck.cards) {
+                        if (cardPtr)
+                            cards.push_back({cardPtr->id, cardPtr->front, cardPtr->back});
+                    }
+                    break;
                 }
+                m_mainWindow->showCardManagerDialog(deckName, cards);
+            });
+
+    // 删除单张卡片：先终止当前复习会话，否则 reviewQueue 中的裸指针会悬空
+    connect(m_mainWindow.get(), &MainWindow::signal_requestDeleteCard,
+            this, [this](const QString& deckName, const QString& cardId) {
+                m_reviewController->finishReview();
+                if (!m_deckController->deleteCardFromDeck(deckName, cardId))
+                    qWarning() << "AppController: deleteCardFromDeck failed for" << cardId;
+            });
+
+    // 从 .in/.out 文件对导入牌组
+    connect(m_mainWindow.get(), &MainWindow::signal_requestImportDeck,
+            this, [this](const QString& filePath) {
+                if (!m_deckController->importDeckFromFile(filePath))
+                    qWarning() << "AppController: importDeckFromFile failed for" << filePath;
+            });
+
+    // 用户主动刷新当前卡组（增删卡片后用来重启复习队列）
+    connect(m_mainWindow.get(), &MainWindow::signal_requestRefreshDeck,
+            this, &AppController::handleStartReview);
+
+    // 删除整个卡组：先中止复习会话以避免 reviewQueue 指针悬空，再让 DeckController 落盘删除
+    connect(m_mainWindow.get(), &MainWindow::signal_requestDeleteDeck,
+            this, [this](const QString& deckName) {
+                m_reviewController->finishReview();
+                if (!m_deckController->deleteDeck(deckName))
+                    qWarning() << "AppController: deleteDeck failed for" << deckName;
             });
 }
 
@@ -220,11 +251,12 @@ void AppController::handleStartReview(const QString& deckName) {
 
     if (hasDueCards) {
         qDebug() << "AppController: 成功唤醒复习队列，今日待攻克卡片总计:" << m_reviewController->totalCount() << "张";
-        // 此时 ReviewController 内部会自动构建队列并抛出第一张卡片的 signal_showQuestion 信号，
-        // 该信号会被我们在 setupGlobalConnections 中订立的 Lambda 表达式瞬间捕捉并呈现在用户的屏幕上
     } else {
-        qDebug() << "AppController: 极佳状态！该牌组今日没有任何卡片到达遗忘临界点。";
-        // 可在此处指挥 m_mainWindow 弹出一个极简美学的鼓励对话框
+        // 没有到期卡片时 ReviewController 不会发任何信号，必须显式把 UI 切到完成态，
+        // 否则切换卡组时旧的提问/评分按钮会残留在屏幕上。
+        qDebug() << "AppController: 该牌组今日没有任何到期卡片。";
+        m_mainWindow->showFinishedSummaryPage();
+        m_mainWindow->updateProgressView(0, 0);
     }
 }
 
@@ -241,7 +273,7 @@ void AppController::handleSubmitFeedback(int quality) {
     qDebug() << "AppController 业务触发: 正在路由用户记忆分值 ->" << quality;
 
     // 4. 将评分结果推入状态机：
-    // 状态机内部会立刻调度 SM2Engine 计算全新的间隔天数，并在其内部调用 StorageManager 执行高安全的“临时文件双缓冲原子写入”
+    // 状态机内部会立刻调度 SM2Engine 计算全新的间隔天数，并在其内部调用 StorageManager 执行高安全的"临时文件双缓冲原子写入"
     bool saveResult = m_reviewController->submitFeedback(feedbackEnum);
 
     if (!saveResult) {
@@ -264,7 +296,7 @@ void AppController::handleResetDeck(const QString& deckName) {
 void AppController::handleAppQuit() {
     qDebug() << "AppController 系统收尾: 检测到软件窗口正在注销，启动全局守护流程...";
 
-    // 架构美学：由于我们的系统设计极其先进，在用户每回答完一张卡片时就执行了“静默即时原子保存”，
+    // 架构美学：由于我们的系统设计极其先进，在用户每回答完一张卡片时就执行了"静默即时原子保存"，
     // 因此在程序关闭的瞬间，我们不需要手忙脚乱地去大规模覆写硬盘。
     // 此处主要用于释放全局独占资源、强制刷清日志缓冲区、或优雅地通知异步 IO 线程池安全终止。
 
