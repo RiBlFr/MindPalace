@@ -155,8 +155,22 @@ const std::vector<Model::Deck>& DeckController::getDecks() const {
 }
 
 bool DeckController::resetDeck(const QString& deckName) {
-    Model::Deck* deck = findDeckByName(deckName);
-    if (!deck) return false;
+    const QString cleanedName = deckName.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "resetDeck failed: deck name is empty after trimming.";
+        return false;
+    }
+
+    Model::Deck* deck = findDeckByName(cleanedName);
+    if (!deck) {
+        qWarning() << "resetDeck failed: deck does not exist:" << cleanedName;
+        return false;
+    }
+
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "resetDeck failed: deck id is empty.";
+        return false;
+    }
 
     const QDate today = QDate::currentDate();
     for (auto& cardPtr : deck->cards) {
@@ -168,42 +182,106 @@ bool DeckController::resetDeck(const QString& deckName) {
         cardPtr->nextReviewDate = today;
     }
 
-    return Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId));
-}
-
-bool DeckController::addCardToDeck(const QString& deckName, const QString& front, const QString& back) {
-    // 1. 在内存中找到目标牌组
-    Model::Deck* deck = findDeckByName(deckName);
-    if (!deck) {
-        qWarning() << "addCardToDeck failed: 找不到目标牌组:" << deckName;
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        qWarning() << "resetDeck failed: unable to save deck file:" << error.message;
         return false;
     }
 
-    // 2. 实例化一张新卡片 (使用 make_unique 创建独占指针)
-    auto newCard = std::make_unique<Model::Card>();
-    newCard->front = front;
-    newCard->back = back;
+    emit signal_deckListChanged();
+    return true;
+}
 
-    // 3. 赋予 SM-2 算法的初始状态
-    newCard->repetitions = 0;
-    newCard->interval = 0.0f;
-    newCard->easeFactor = 2.5f;
-    const QDate today = QDate::currentDate();
-    newCard->lastReviewed = today;
-    newCard->nextReviewDate = today;
+bool DeckController::addCardToDeck(const QString& deckName, const QString& front, const QString& back) {
+    const QString cleanedName = deckName.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "addCardToDeck failed: deck name is empty after trimming.";
+        return false;
+    }
 
-    // 4. 将卡片压入内存中的牌组列表 (必须使用 std::move 转移所有权！)
-    deck->cards.push_back(std::move(newCard));
+    // 1. 在内存中找到目标牌组
+    Model::Deck* deck = findDeckByName(cleanedName);
+    if (!deck) {
+        qWarning() << "addCardToDeck failed: deck does not exist:" << cleanedName;
+        return false;
+    }
 
-    // 5. 触发 StorageManager 进行持久化落盘
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "addCardToDeck failed: deck id is empty.";
+        return false;
+    }
+
+    if (front.trimmed().isEmpty() || back.trimmed().isEmpty()) {
+        qWarning() << "addCardToDeck notice: card front or back is empty.";
+    }
+
+    // 2. Card 构造函数负责初始化正反面文本和 SM-2 初始状态。
+    auto newCard = std::make_unique<Model::Card>(front, back);
+
+    // 3. 通过 Deck 的封装接口转移卡片所有权。
+    deck->addCard(std::move(newCard));
+
+    // 4. 触发 StorageManager 进行持久化落盘
     Service::StorageError error;
     if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
         // 如果落盘失败，必须进行内存回滚，保证内存与硬盘一致！
         deck->cards.pop_back();
-        qWarning() << "addCardToDeck failed: 文件保存失败，已回滚内存状态。原因:" << error.message;
+        qWarning() << "addCardToDeck failed: unable to save deck file:" << error.message;
         return false;
     }
 
+    emit signal_deckListChanged();
+    return true;
+}
+
+bool DeckController::deleteCardFromDeck(const QString& deckName, const QString& cardId) {
+    const QString cleanedName = deckName.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: deck name is empty after trimming.";
+        return false;
+    }
+
+    const QString cleanedCardId = cardId.trimmed();
+    if (cleanedCardId.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: card id is empty after trimming.";
+        return false;
+    }
+
+    // 1. 找到目标牌组。删除卡片属于牌组内部数据变更，必须先定位到内存中的 Deck。
+    Model::Deck* deck = findDeckByName(cleanedName);
+    if (!deck) {
+        qWarning() << "deleteCardFromDeck failed: deck does not exist:" << cleanedName;
+        return false;
+    }
+
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: deck id is empty.";
+        return false;
+    }
+
+    auto cardIterator = std::find_if(deck->cards.begin(), deck->cards.end(),
+        [&cleanedCardId](const std::unique_ptr<Model::Card>& cardPtr) {
+            return cardPtr && cardPtr->id == cleanedCardId;
+        });
+
+    if (cardIterator == deck->cards.end()) {
+        qWarning() << "deleteCardFromDeck failed: card does not exist:" << cleanedCardId;
+        return false;
+    }
+
+    // 2. 先从内存移除，再尝试落盘；若保存失败，必须插回原位置保持内存与磁盘一致。
+    const auto cardIndex = std::distance(deck->cards.begin(), cardIterator);
+    auto removedCard = std::move(*cardIterator);
+    deck->cards.erase(cardIterator);
+
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        deck->cards.insert(deck->cards.begin() + cardIndex, std::move(removedCard));
+        qWarning() << "deleteCardFromDeck failed: unable to save deck file:" << error.message;
+        return false;
+    }
+
+    emit signal_deckListChanged();
     return true;
 }
 

@@ -65,6 +65,22 @@ public:
      */
     bool addCardToDeck(const QString& deckName, const QString& front, const QString& back);
 
+    /**
+     * @brief 从指定牌组删除一张卡片并立刻落盘。
+     * @param deckName 目标牌组名称。
+     * @param cardId 要删除的卡片唯一 ID。
+     * @return 删除并写盘成功时返回 true，否则返回 false。
+     */
+    bool deleteCardFromDeck(const QString& deckName, const QString& cardId);
+
+    /**
+     * @brief 从外部文件导入一个完整牌组。
+     * 具体导入格式、字段兼容策略、重名处理策略待后续确认。
+     * @param sourceFilePath 外部牌组文件路径。
+     * @return 导入并写入本地牌组目录成功时返回 true，否则返回 false。
+     */
+    bool importDeckFromFile(const QString& sourceFilePath);
+
 signals:
     // ==========================================
     // 【新增区】对外广播的信号器官
