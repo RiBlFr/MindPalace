@@ -89,6 +89,12 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     setupStyles();
+
+    // ==========================================
+    // 等全局样式全部加载完毕后，再为整个大窗口铺设极光渐变底色！
+    // ==========================================
+    this->setObjectName("mainWindowRoot");
+    setGradientBackground(this);
 }
 
 // 3. 拦截窗口关闭事件，通知总控进行数据安全落盘
@@ -149,9 +155,15 @@ void MainWindow::updateProgressView(int done, int total) {
 MainWindow::~MainWindow() = default;
 
 void MainWindow::initUI() {
+    // ==========================================
+    // 1. 让整个大窗口（包含菜单栏的底部）变成渐变色
+    // ==========================================
+
     auto *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    setBackground(centralWidget, Theme::WindowBg);
+
+    // 2. 中央面板设为全透明，直接透出后面的渐变色
+    centralWidget->setStyleSheet("background: transparent;");
 
     auto *mainLayout = new QHBoxLayout(centralWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -169,6 +181,37 @@ void MainWindow::initUI() {
 }
 
 void MainWindow::setupMenuBar() {
+    // 菜单栏高级玻璃质感样式
+    menuBar()->setStyleSheet(
+        "QMenuBar {"
+        "   background-color: transparent;" // 让菜单栏全透明，直接透出后面的极光渐变
+        "   border-bottom: 1px solid rgba(255, 255, 255, 80);" // 极细的白色高光分割线
+        "}"
+        "QMenuBar::item {"
+        "   background: transparent;"
+        "   padding: 8px 12px;"
+        "   margin: 4px 2px;"
+        "   border-radius: 6px;" // 圆角反馈
+        "}"
+        "QMenuBar::item:selected {"
+        "   background: rgba(255, 255, 255, 100);" // 鼠标悬停时的半透明高光
+        "}"
+        "QMenu {"
+        "   background-color: rgba(255, 255, 255, 220);" // 下拉菜单的毛玻璃质感
+        "   border: 1px solid rgba(255, 255, 255, 200);"
+        "   border-radius: 8px;"
+        "   padding: 4px;"
+        "}"
+        "QMenu::item {"
+        "   padding: 6px 24px 6px 12px;"
+        "   border-radius: 4px;"
+        "}"
+        "QMenu::item:selected {"
+        "   background-color: rgba(37, 99, 235, 40);" // 淡淡的主题蓝选中态
+        "   color: #2563eb;"
+        "}"
+    );
+
     QMenu *fileMenu = menuBar()->addMenu(tr("文件(&F)"));
 
     // 新建卡组：直接复用左侧栏按钮的点击逻辑，避免重复维护两份弹窗代码
@@ -236,30 +279,73 @@ void MainWindow::setupLeftPanel() {
     deckListWidget->setObjectName("deckList");
     deckListWidget->setFrameShape(QFrame::NoFrame);
     deckListWidget->setAlternatingRowColors(false);
-
     leftLayout->addWidget(deckListWidget, 1);
 
+    // ==========================================
+    // 1. 新增卡组按钮 (核心高亮，使用主题长春花蓝)
+    // ==========================================
     addDeckBtn = new QPushButton(tr("+ 新增卡组"));
     addDeckBtn->setProperty("variant", "primary");
     addDeckBtn->setMinimumHeight(40);
     setButtonFont(addDeckBtn, 11);
+    addDeckBtn->setStyleSheet(
+        "QPushButton { "
+        "   /* 1. 微凸面受光：使用由亮到暗的微渐变，拒绝死板纯色 */"
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9B88FA, stop:1 #8B75FA);"
+        "   color: white; "
+        "   border-radius: 8px; "
+        "   border: 1px solid #7A61F9; /* 基础轮廓线 */"
+        "   /* 2. 灵魂高光：模拟顶部环境光的折射 */"
+        "   border-top: 1px solid rgba(255, 255, 255, 0.45); "
+        "   /* 3. 底部背光：增加按钮的厚度与抓地力 */"
+        "   border-bottom: 1px solid rgba(0, 0, 0, 0.15); "
+        "   font-weight: bold; "
+        "}"
+        "QPushButton:hover { "
+        "   /* 悬停时整体变亮，模拟光源拉近 */"
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #AD9DFB, stop:1 #9D8AFB);"
+        "}"
+        "QPushButton:pressed { "
+        "   /* 4. 按下时反光面消失，彻底变为平面的暗色，配合内边距下沉 */"
+        "   background: #7A61F9;"
+        "   border-top: 1px solid transparent;"
+        "   padding-top: 2px; "
+        "}"
+    );
     leftLayout->addWidget(addDeckBtn);
 
-    // ==========================================
-    // 日历看板入口按钮
-    // ==========================================
-    // 增加一点间距，让它和上面的破坏性操作（删除/重置）隔开
     leftLayout->addSpacing(16);
 
+    // ==========================================
+    // 2. 日历看板按钮 (次级高亮，使用温柔浅蓝)
+    // ==========================================
     calendarBtn = new QPushButton(tr("📅 复习日历"));
-    calendarBtn->setProperty("variant", "primary"); // 使用主题色
+    calendarBtn->setProperty("variant", "primary");
     calendarBtn->setMinimumHeight(44);
     setButtonFont(calendarBtn, 12);
+    calendarBtn->setStyleSheet(
+        "QPushButton { "
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7D9FFB, stop:1 #638BFA);"
+        "   color: white; "
+        "   border-radius: 8px; "
+        "   border: 1px solid #4A76F9; "
+        "   border-top: 1px solid rgba(255, 255, 255, 0.45); "
+        "   border-bottom: 1px solid rgba(0, 0, 0, 0.15); "
+        "   font-weight: bold; "
+        "}"
+        "QPushButton:hover { "
+        "   background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #95B2FC, stop:1 #7D9FFB);"
+        "}"
+        "QPushButton:pressed { "
+        "   background: #4A76F9;"
+        "   border-top: 1px solid transparent;"
+        "   padding-top: 2px; "
+        "}"
+    );
     leftLayout->addWidget(calendarBtn);
 
     // 绑定信号：点击按钮打开日历弹窗
     connect(calendarBtn, &QPushButton::clicked, this, [this]() {
-        // 将现有的卡组名称提取出来传给日历
         QStringList allDecks;
         for(int i = 0; i < deckListWidget->count(); ++i) {
             allDecks << deckListWidget->item(i)->text();
@@ -269,27 +355,45 @@ void MainWindow::setupLeftPanel() {
 
         connect(&dialog, &ScheduleCalendarDialog::signal_requestCalendarData,
                 this, &MainWindow::signal_requestCalendarData);
-
         connect(&dialog, &ScheduleCalendarDialog::signal_requestUpdateSchedule,
                 this, &MainWindow::signal_requestUpdateSchedule);
 
         dialog.exec();
     });
 
+    // ==========================================
+    // 3. 删除卡组按钮 (危险操作，半透明毛玻璃底 + 红字)
+    // ==========================================
     deleteDeckBtn = new QPushButton(tr("删除卡组"));
     deleteDeckBtn->setProperty("variant", "danger");
     deleteDeckBtn->setMinimumHeight(40);
     setButtonFont(deleteDeckBtn, 11);
     deleteDeckBtn->setEnabled(false);
+    deleteDeckBtn->setStyleSheet(
+        "QPushButton { background-color: rgba(255, 255, 255, 180); color: #EF4444; border-radius: 8px; border: 1px solid #FECACA; font-weight: bold; }"
+        "QPushButton:hover { background-color: #FEE2E2; }"
+        "QPushButton:pressed { padding-top: 2px; }" // <--- 增加物理下沉感
+        "QPushButton:disabled { color: #FCA5A5; border-color: #FEF2F2; background-color: rgba(255, 255, 255, 50); }"
+    );
     leftLayout->addWidget(deleteDeckBtn);
 
+    // ==========================================
+    // 4. 重置进度按钮 (警告操作，半透明毛玻璃底 + 橙字)
+    // ==========================================
     resetDeckBtn = new QPushButton(tr("重置卡组进度"));
     resetDeckBtn->setProperty("variant", "warning");
     resetDeckBtn->setMinimumHeight(40);
     setButtonFont(resetDeckBtn, 11);
     resetDeckBtn->setEnabled(false);
+    resetDeckBtn->setStyleSheet(
+        "QPushButton { background-color: rgba(255, 255, 255, 180); color: #F59E0B; border-radius: 8px; border: 1px solid #FDE68A; font-weight: bold; }"
+        "QPushButton:hover { background-color: #FEF3C7; }"
+        "QPushButton:pressed { padding-top: 2px; }" // <--- 增加物理下沉感
+        "QPushButton:disabled { color: #FCD34D; border-color: #FFFBEB; background-color: rgba(255, 255, 255, 50); }"
+    );
     leftLayout->addWidget(resetDeckBtn);
 
+    // 绑定基础操作的弹窗信号
     connect(addDeckBtn, &QPushButton::clicked, this, [this]() {
         auto name = StyledDialogs::getText(
             this,

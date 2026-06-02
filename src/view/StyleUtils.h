@@ -19,6 +19,7 @@ namespace Theme {
 }
 
 void setBackground(QWidget *widget, const QColor &color);
+void setGradientBackground(QWidget *widget);
 void setTextColor(QWidget *widget, const QColor &color);
 void setLabelStyle(QLabel *label, int pointSize, QFont::Weight weight = QFont::Normal, const QColor &color = Theme::Text);
 void addSoftShadow(QWidget *widget);

@@ -20,8 +20,9 @@ Item {
     signal cardClicked(bool flipped)
 
     Rectangle {
-        anchors.fill: parent
-        color: "transparent"
+        color: "#D9FFFFFF"
+        border.color: "#FFFFFF"
+        border.width: 1.5
     }
 
     Item {
@@ -71,13 +72,43 @@ Item {
         layer.enabled: true
         layer.smooth: true
 
-        Rectangle {
-            id: shadow
+        Item {
+            id: shadowGroup
             anchors.fill: cardBody
-            anchors.topMargin: 18
-            radius: cardBody.radius
-            color: "#25304a"
-            opacity: root.hovered ? 0.22 : 0.13
+            // 鼠标悬浮时，阴影整体加深，配合卡片的放大效果
+            opacity: root.hovered ? 1.0 : 0.55
+            z: -1 // 确保阴影永远在卡片底层
+
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
+
+            // 第一层：最广阔的环境光遮蔽（超大范围，极浅颜色）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -16
+                anchors.topMargin: 8
+                radius: cardBody.radius + 16
+                color: "#08102040" // 带有深蓝紫基调的超低透明度
+            }
+
+            // 第二层：主光源投影（中等范围，起过渡作用）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -8
+                anchors.topMargin: 18
+                radius: cardBody.radius + 8
+                color: "#0C102040"
+            }
+
+            // 第三层：实体接触阴影（贴近卡片底部，颜色最深，营造重量感）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -2
+                anchors.topMargin: 26
+                radius: cardBody.radius + 2
+                color: "#12102040"
+            }
         }
 
         Rectangle {

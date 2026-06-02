@@ -1,89 +1,94 @@
 #include "WeeklyChartWidget.h"
 #include <QPainter>
 #include <QPainterPath>
-#include <algorithm>
+#include <QEasingCurve> // 缓动曲线引擎
 
-WeeklyChartWidget::WeeklyChartWidget(QWidget *parent) : QWidget(parent) {
-    // 设置一个最小高度，保证图表有足够的空间展示
+WeeklyChartWidget::WeeklyChartWidget(QWidget *parent) : QWidget(parent), m_animProgress(1.0) {
     setMinimumHeight(150);
-    
-    // 初始化默认空数据（7天）
     m_data = {0, 0, 0, 0, 0, 0, 0};
     m_labels = {"-", "-", "-", "-", "-", "-", "今"};
+
+    // 【核心注入】初始化弹性生长动画
+    m_animation = new QVariantAnimation(this);
+    m_animation->setDuration(850); // 850毫秒的平滑生长
+    m_animation->setEasingCurve(QEasingCurve::OutBounce);
+
+    // 当动画数值改变时，更新进度并触发界面重绘
+    connect(m_animation, &QVariantAnimation::valueChanged, this, [this](const QVariant &value){
+        m_animProgress = value.toReal();
+        update();
+    });
 }
 
 void WeeklyChartWidget::setData(const std::vector<int>& data, const QStringList& labels) {
     if (data.size() == 7 && labels.size() == 7) {
         m_data = data;
         m_labels = labels;
-        update(); // 触发重绘
+
+        // 【触发】每次注入新数据时，重启生长动画
+        m_animation->stop();
+        m_animation->setStartValue(0.0);
+        m_animation->setEndValue(1.0);
+        m_animation->start();
     }
 }
 
 void WeeklyChartWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event);
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿，圆角更平滑
+    painter.setRenderHint(QPainter::Antialiasing);
 
-    // 1. 计算图表尺寸与边距
     int paddingLeftRight = 10;
-    int paddingTop = 25;    // 给顶部留出写数字的空间
-    int paddingBottom = 25; // 给底部留出写日期的空间
-    
+    int paddingTop = 25;
+    int paddingBottom = 25;
+
     int drawWidth = width() - paddingLeftRight * 2;
     int drawHeight = height() - paddingTop - paddingBottom;
 
-    // 2. 寻找最大值，用于计算柱子的高度比例
     int maxVal = 0;
     for (int v : m_data) {
         if (v > maxVal) maxVal = v;
     }
-    if (maxVal == 0) maxVal = 10; // 避免除以 0，当没有数据时默认比例
+    if (maxVal == 0) maxVal = 10;
 
-    // 3. 计算单根柱子的宽度和间距
     int numBars = 7;
     float step = drawWidth / (float)numBars;
-    float barWidth = step * 0.55f; // 柱子占据每份空间的 55%
-    
-    // 准备画笔和画刷
-    QColor barColor("#4A90E2"); // 使用与你 UI 呼应的现代蓝
-    QColor textColor("#666666"); // 柔和的文字颜色
+    float barWidth = step * 0.55f;
 
-    // 4. 开始遍历绘制 7 根柱子
+    QColor barColor("#8B75FA");
+    QColor textColor("#64748b");
+
     for (int i = 0; i < numBars; ++i) {
         int val = m_data[i];
-        
-        // 计算当前柱子的高度 (映射到实际像素)
-        float heightRatio = (float)val / maxVal;
-        int barHeight = (int)(drawHeight * heightRatio);
-        
-        // 如果值为 0，也给个2像素的保底高度，视觉上更好看
-        if (barHeight < 2) barHeight = 2; 
 
-        // 计算柱子的 X, Y 坐标
+        float heightRatio = (float)val / maxVal;
+        int targetBarHeight = (int)(drawHeight * heightRatio);
+        if (targetBarHeight < 2) targetBarHeight = 2;
+
+        // 【微动效核心】当前柱子的高度 = 最终目标高度 * 动画进度
+        int barHeight = (int)(targetBarHeight * m_animProgress);
+
         int cx = paddingLeftRight + i * step + (step - barWidth) / 2;
         int cy = paddingTop + drawHeight - barHeight;
 
-        // 绘制带圆角的柱子 (只让顶部有圆角会更好看，这里用一个巧妙的画法)
         QRectF barRect(cx, cy, barWidth, barHeight);
         QPainterPath path;
         path.addRoundedRect(barRect, barWidth / 2.0, barWidth / 2.0);
-        
+
         painter.setPen(Qt::NoPen);
         painter.setBrush(barColor);
         painter.drawPath(path);
 
-        // 绘制柱子顶部的数字
         painter.setPen(textColor);
         QFont font = painter.font();
         font.setPointSize(9);
         font.setBold(true);
         painter.setFont(font);
-        
+
+        // 让顶部的数字也跟随着柱子一起“长”上去
         QRectF numRect(cx - 10, cy - 18, barWidth + 20, 15);
         painter.drawText(numRect, Qt::AlignCenter, QString::number(val));
 
-        // 绘制柱子底部的日期标签
         font.setBold(false);
         painter.setFont(font);
         QRectF labelRect(cx - 10, paddingTop + drawHeight + 5, barWidth + 20, 15);
