@@ -9,6 +9,7 @@
 #include <QStringList>
 
 #include "CardManagerDialog.h"
+#include "WeeklyChartWidget.h"
 
 class QWidget;
 class QListWidget;
@@ -90,6 +91,11 @@ public:
      */
     void updateCalendarBoard(const QMap<QDate, QStringList>& calendarData);
 
+    /**
+     * @brief 更新右下角的周复习趋势图表
+     */
+    void updateWeeklyChart(const std::vector<int>& data, const QStringList& labels);
+
 private:
     // UI 初始化
     void initUI();
@@ -167,6 +173,8 @@ private:
     QLabel *todayStudyLabel{};
     QLabel *reviewStatsLabel{};
     QProgressBar *dailyProgressBar{};
+
+    WeeklyChartWidget *weeklyChartWidget{};
 };
 
 #endif // MAINWINDOW_H
