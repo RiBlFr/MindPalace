@@ -27,7 +27,7 @@ public:
     ~MainWindow() override;
 
     // ==========================================
-    // 【新增】对外暴露的被动渲染接口 (供 AppController 调用)
+    // 【新增】对外暴露的被动渲染接口 (供 AppController 调用).
     // ==========================================
 
     /**
@@ -35,6 +35,11 @@ public:
      * @param deckNames 所有可用牌组的名字清单
      */
     void updateDeckListView(const std::vector<QString>& deckNames) const;
+
+    /**
+     * @brief 更新右下角的“总体统计”面板
+     */
+    void updateSummaryStats(int totalCards, double masteryRate, int totalReviews);
 
     /**
      * @brief 渲染卡片正面（提问态）
