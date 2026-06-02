@@ -37,7 +37,7 @@ namespace MindPalace::Controller {
          * @brief 点火函数：启动应用程序，展示主窗口
          */
         void start();
-
+//
     private:
         // ==========================================
         // 1. 核心组件托管区 (RAII)

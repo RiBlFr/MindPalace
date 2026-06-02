@@ -47,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     resize(screenGeometry.width() * 0.9, screenGeometry.height() * 0.85);
 
     initUI();
+    //
 
     // 1. 左侧牌组列表点击 → 开始复习 + 激活重置与新增卡片按钮
     connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {

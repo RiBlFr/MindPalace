@@ -46,7 +46,7 @@ public:
      * @param hasNextCard 是否还有更多待复习卡片（用于控制背景叠层阴影卡的显示）
      */
     void renderQuestionLayout(const QString& frontText, bool hasNextCard = false) const;
-
+//
     /**
      * @brief 渲染卡片正反面与分隔线（答案态）
      */

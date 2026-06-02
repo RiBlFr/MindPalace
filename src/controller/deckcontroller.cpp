@@ -465,7 +465,7 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
 
         // 1. 累计复习次数：将每张卡片的成功复习次数累加
         stats.totalReviews += cardPtr->repetitions;
-
+//
         // 2. 核心算法：判断是否为“已掌握”卡片 (Mature Card)
         // 规则：复习间隔 >= 21 天，或连续成功复习 >= 4 次
         if (cardPtr->interval >= 21.0f || cardPtr->repetitions >= 4) {
