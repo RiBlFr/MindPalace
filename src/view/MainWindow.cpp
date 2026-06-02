@@ -17,6 +17,7 @@
 #include <QVBoxLayout>
 #include <QQuickWidget>
 #include <QQuickItem>
+#include <QStackedWidget>
 #include <QUrl>
 #include <QMetaObject>
 #include <QJsonArray>
@@ -30,12 +31,11 @@
 
 #include <QCloseEvent>
 #include <QShortcut>
-#include <QInputDialog>
+#include <QFileDialog>
+#include <QMessageBox>
 
-#include <QDialog>
-#include <QFormLayout>
-#include <QLineEdit>
-#include <QDialogButtonBox>
+#include "CardManagerDialog.h"
+#include "StyledDialogs.h"
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -50,9 +50,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 1. 左侧牌组列表点击 → 开始复习 + 激活重置与新增卡片按钮
     connect(deckListWidget, &QListWidget::currentTextChanged, this, [this](const QString& text) {
-        bool hasSelection = !text.isEmpty();
+        const bool hasSelection = !text.isEmpty();
         resetDeckBtn->setEnabled(hasSelection);
-        addCardBtn->setEnabled(hasSelection); // 【新增这一句】同步激活/禁用新增卡片按钮
+        deleteDeckBtn->setEnabled(hasSelection);
 
         if (hasSelection) {
             emit signal_requestStartReview(text);
@@ -108,8 +108,8 @@ void MainWindow::renderQuestionLayout(const QString& frontText, bool hasNextCard
         root->setProperty("questionText", frontText);
         root->setProperty("answerText", QString());
     }
-    showAnswerBtn->show();
-    feedbackRow->hide();
+    buttonStack->setCurrentWidget(showAnswerBtn);
+    buttonStack->show();
 }
 
 void MainWindow::preloadAnswerText(const QString& backText) {
@@ -122,8 +122,8 @@ void MainWindow::renderAnswerLayout(const QString& backText) {
     if (auto *root = flashCardView->rootObject()) {
         root->setProperty("answerText", backText);
     }
-    showAnswerBtn->hide();
-    feedbackRow->show();
+    buttonStack->setCurrentWidget(feedbackRow);
+    buttonStack->show();
 }
 
 void MainWindow::showFinishedSummaryPage() {
@@ -132,8 +132,7 @@ void MainWindow::showFinishedSummaryPage() {
         root->setProperty("questionText", tr("今日复习全部完成！"));
         root->setProperty("answerText", tr("所有卡片已复习完毕，明日再来~"));
     }
-    showAnswerBtn->hide();
-    feedbackRow->hide();
+    buttonStack->hide();
 }
 
 void MainWindow::updateProgressView(int done, int total) {
@@ -169,11 +168,41 @@ void MainWindow::initUI() {
 
 void MainWindow::setupMenuBar() {
     QMenu *fileMenu = menuBar()->addMenu(tr("文件(&F)"));
-    fileMenu->addAction(tr("新建卡组"));
-    fileMenu->addAction(tr("导入卡组"));
-    fileMenu->addAction(tr("导出卡组"));
+
+    // 新建卡组：直接复用左侧栏按钮的点击逻辑，避免重复维护两份弹窗代码
+    auto *newDeckAction = fileMenu->addAction(tr("新建卡组"));
+    newDeckAction->setShortcut(QKeySequence::New);
+    connect(newDeckAction, &QAction::triggered, addDeckBtn, &QPushButton::click);
+
+    auto *importAction = fileMenu->addAction(tr("导入卡组(.in/.out)"));
+    connect(importAction, &QAction::triggered, this, [this]() {
+        const QString filePath = QFileDialog::getOpenFileName(
+            this, tr("选择 .in 文件"), {}, tr("题库文件 (*.in)"));
+        if (!filePath.isEmpty())
+            emit signal_requestImportDeck(filePath);
+    });
+
+    auto *manageAction = fileMenu->addAction(tr("管理当前卡组的卡片"));
+    connect(manageAction, &QAction::triggered, this, [this]() {
+        if (auto *item = deckListWidget->currentItem())
+            emit signal_requestManageCards(item->text());
+        else
+            QMessageBox::information(this, tr("提示"), tr("请先在左侧选择一个卡组"));
+    });
+
+    auto *refreshAction = fileMenu->addAction(tr("刷新当前卡组"));
+    refreshAction->setShortcut(QKeySequence::Refresh);
+    connect(refreshAction, &QAction::triggered, this, [this]() {
+        if (auto *item = deckListWidget->currentItem())
+            emit signal_requestRefreshDeck(item->text());
+    });
+
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("退出"));
+
+    // 退出：触发 close() 走 closeEvent，让 signal_appWillClose 被正常发出
+    auto *quitAction = fileMenu->addAction(tr("退出"));
+    quitAction->setShortcut(QKeySequence::Quit);
+    connect(quitAction, &QAction::triggered, this, &QWidget::close);
 
     QMenu *editMenu = menuBar()->addMenu(tr("编辑(&E)"));
     editMenu->addAction(tr("偏好设置"));
@@ -214,6 +243,13 @@ void MainWindow::setupLeftPanel() {
     setButtonFont(addDeckBtn, 11);
     leftLayout->addWidget(addDeckBtn);
 
+    deleteDeckBtn = new QPushButton(tr("删除卡组"));
+    deleteDeckBtn->setProperty("variant", "danger");
+    deleteDeckBtn->setMinimumHeight(40);
+    setButtonFont(deleteDeckBtn, 11);
+    deleteDeckBtn->setEnabled(false);
+    leftLayout->addWidget(deleteDeckBtn);
+
     resetDeckBtn = new QPushButton(tr("重置卡组进度"));
     resetDeckBtn->setProperty("variant", "warning");
     resetDeckBtn->setMinimumHeight(40);
@@ -222,62 +258,24 @@ void MainWindow::setupLeftPanel() {
     leftLayout->addWidget(resetDeckBtn);
 
     connect(addDeckBtn, &QPushButton::clicked, this, [this]() {
-    bool ok;
-    QString newDeckName = QInputDialog::getText(this, "新建牌组",
-                                         "请输入新牌组的名称:", QLineEdit::Normal,
-                                         "", &ok);
-    // 如果用户点了确定，且名字不为空，就把信号发射给 AppController
-    if (ok && !newDeckName.trimmed().isEmpty()) {
-        emit signal_requestCreateDeck(newDeckName.trimmed());
-    }
-});
-    // ==========================================
-    // 【新增】实例化"新增卡片"按钮
-    // ==========================================
-    addCardBtn = new QPushButton(tr("+ 新增卡片"));
-    addCardBtn->setProperty("variant", "primary"); // 保持与新增卡组统一的主色调
-    addCardBtn->setMinimumHeight(40);
-    setButtonFont(addCardBtn, 11);
-    addCardBtn->setEnabled(false); // 默认禁用，必须先选中左侧某个卡组才能添加卡片
-    leftLayout->addWidget(addCardBtn);
+        auto name = StyledDialogs::getText(
+            this,
+            tr("新建卡组"),
+            tr("请输入新卡组的名称"),
+            tr("如：英语单词 / 高数公式"));
+        if (name) emit signal_requestCreateDeck(*name);
+    });
 
-    // 绑定点击事件：弹出一个带有两个输入框的自定义小窗口
-    connect(addCardBtn, &QPushButton::clicked, this, [this]() {
-        // 安全检查：确认当前确实有选中的牌组
-        auto *currentItem = deckListWidget->currentItem();
-        if (!currentItem) return;
-        QString currentDeckName = currentItem->text();
-
-        // 临时构建一个弹窗 (Dialog)
-        QDialog dialog(this);
-        dialog.setWindowTitle(tr("新增卡片 - ") + currentDeckName);
-        dialog.setMinimumWidth(300);
-
-        auto *formLayout = new QFormLayout(&dialog);
-
-        // 创建正反面输入框
-        auto *frontEdit = new QLineEdit(&dialog);
-        auto *backEdit = new QLineEdit(&dialog);
-        formLayout->addRow(tr("正面 (问题):"), frontEdit);
-        formLayout->addRow(tr("背面 (答案):"), backEdit);
-
-        // 创建底部的确认和取消按钮
-        auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-        formLayout->addRow(btnBox);
-
-        connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-        connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-
-        // 阻塞等待用户操作。如果用户点击了"确定"：
-        if (dialog.exec() == QDialog::Accepted) {
-            QString frontText = frontEdit->text().trimmed();
-            QString backText = backEdit->text().trimmed();
-
-            // 确保两面都填了内容再发信号
-            if (!frontText.isEmpty() && !backText.isEmpty()) {
-                emit signal_requestAddCard(currentDeckName, frontText, backText);
-            }
-        }
+    connect(deleteDeckBtn, &QPushButton::clicked, this, [this]() {
+        auto *item = deckListWidget->currentItem();
+        if (!item) return;
+        const QString name = item->text();
+        const bool ok = StyledDialogs::confirm(
+            this,
+            tr("删除卡组"),
+            tr("确定要删除卡组 [%1] 吗？\n该卡组的全部卡片和复习进度都会被永久删除，且无法恢复。").arg(name),
+            /*dangerAction=*/true);
+        if (ok) emit signal_requestDeleteDeck(name);
     });
 }
 
@@ -292,18 +290,21 @@ void MainWindow::setupCenterPanel() {
     initFlashCardView();
     centerLayout->addWidget(flashCardView, 1);
 
-    // 问题态：大的"显示答案"按钮，与评分行互斥显示
+    // 问题态：大的"显示答案"按钮
     showAnswerBtn = new QPushButton(tr("显示答案  （空格键）"));
     showAnswerBtn->setProperty("variant", "primary");
     showAnswerBtn->setMinimumHeight(62);
     setButtonFont(showAnswerBtn, 13);
-    showAnswerBtn->hide();
-    centerLayout->addWidget(showAnswerBtn);
 
-    // 答案态：4 个评分按钮，包在一个容器里方便整体 show/hide
+    // 答案态：4 个评分按钮容器
     feedbackRow = setupFeedbackButtons();
-    feedbackRow->hide();
-    centerLayout->addWidget(feedbackRow);
+
+    // 两者放入 QStackedWidget，始终占据相同高度，切换时布局不跳动
+    buttonStack = new QStackedWidget;
+    buttonStack->addWidget(showAnswerBtn);
+    buttonStack->addWidget(feedbackRow);
+    buttonStack->hide();
+    centerLayout->addWidget(buttonStack);
 }
 
 void MainWindow::initFlashCardView() {
@@ -445,6 +446,19 @@ void MainWindow::setupRightPanel() {
 
     rightLayout->addWidget(summaryFrame);
     rightLayout->addStretch();
+}
+
+void MainWindow::showCardManagerDialog(const QString& deckName,
+                                       const std::vector<CardDisplayInfo>& cards) {
+    CardManagerDialog dialog(deckName, cards, this);
+    // 把对话框内部的增/删/改请求转发为 MainWindow 已有的信号，AppController 不感知 dialog 类型
+    connect(&dialog, &CardManagerDialog::signal_requestDeleteCard,
+            this, &MainWindow::signal_requestDeleteCard);
+    connect(&dialog, &CardManagerDialog::signal_requestAddCard,
+            this, &MainWindow::signal_requestAddCard);
+    connect(&dialog, &CardManagerDialog::signal_requestUpdateCard,
+            this, &MainWindow::signal_requestUpdateCard);
+    dialog.exec();
 }
 
 void MainWindow::setupStyles() {
