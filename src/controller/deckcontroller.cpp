@@ -234,6 +234,57 @@ bool DeckController::addCardToDeck(const QString& deckName, const QString& front
     return true;
 }
 
+bool DeckController::deleteCardFromDeck(const QString& deckName, const QString& cardId) {
+    const QString cleanedName = deckName.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: deck name is empty after trimming.";
+        return false;
+    }
+
+    const QString cleanedCardId = cardId.trimmed();
+    if (cleanedCardId.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: card id is empty after trimming.";
+        return false;
+    }
+
+    // 1. 找到目标牌组。删除卡片属于牌组内部数据变更，必须先定位到内存中的 Deck。
+    Model::Deck* deck = findDeckByName(cleanedName);
+    if (!deck) {
+        qWarning() << "deleteCardFromDeck failed: deck does not exist:" << cleanedName;
+        return false;
+    }
+
+    if (deck->deckId.isEmpty()) {
+        qWarning() << "deleteCardFromDeck failed: deck id is empty.";
+        return false;
+    }
+
+    auto cardIterator = std::find_if(deck->cards.begin(), deck->cards.end(),
+        [&cleanedCardId](const std::unique_ptr<Model::Card>& cardPtr) {
+            return cardPtr && cardPtr->id == cleanedCardId;
+        });
+
+    if (cardIterator == deck->cards.end()) {
+        qWarning() << "deleteCardFromDeck failed: card does not exist:" << cleanedCardId;
+        return false;
+    }
+
+    // 2. 先从内存移除，再尝试落盘；若保存失败，必须插回原位置保持内存与磁盘一致。
+    const auto cardIndex = std::distance(deck->cards.begin(), cardIterator);
+    auto removedCard = std::move(*cardIterator);
+    deck->cards.erase(cardIterator);
+
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
+        deck->cards.insert(deck->cards.begin() + cardIndex, std::move(removedCard));
+        qWarning() << "deleteCardFromDeck failed: unable to save deck file:" << error.message;
+        return false;
+    }
+
+    emit signal_deckListChanged();
+    return true;
+}
+
 Model::Deck* DeckController::findDeckByName(const QString& deckName) {
     if (deckName.isEmpty()) {
         return nullptr;
