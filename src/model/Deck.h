@@ -11,6 +11,7 @@
 #include <QString>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QMap>
 
 
 namespace MindPalace::Model {
@@ -30,6 +31,10 @@ namespace MindPalace::Model {
         QString deckName;
 
         std::vector<std::unique_ptr<Card>> cards;
+
+        // Key: 日期字符串 (格式如 "2026-06-02")
+        // Value: 操作指令 (1 = 强制复习, -1 = 强制休假, 其他值/不存在则遵循算法)
+        QMap<QString, int> manualSchedule;
 
         // ==========================================
         // 3. 核心管理接口

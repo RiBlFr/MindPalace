@@ -217,6 +217,16 @@ void AppController::setupGlobalConnections() {
                 if (!m_deckController->deleteDeck(deckName))
                     qWarning() << "AppController: deleteDeck failed for" << deckName;
             });
+
+    // 路由 1：数据查询 (直接利用 Qt::DirectConnection 特性，瞬间填满引用的 outData)
+    connect(m_mainWindow.get(), &MainWindow::signal_requestCalendarData,
+            this, [this](int year, int month, QMap<QDate, QStringList>& outData) {
+                outData = getCalendarData(year, month);
+            }, Qt::DirectConnection);
+
+    // 路由 2：修改硬盘计划
+    connect(m_mainWindow.get(), &MainWindow::signal_requestUpdateSchedule,
+            this, &AppController::handleUpdateDeckSchedule);
 }
 
 void AppController::refreshDeckList() {
@@ -255,6 +265,20 @@ void AppController::handleStartReview(const QString& deckName) {
     if (!targetDeck) {
         qWarning() << "AppController 异常拦截: 无法在现有牌组库中匹配到名称:" << deckName;
         return;
+    }
+
+    // 软覆盖拦截：判断今天是否为该牌组的“强制休假日”
+    // ==========================================
+    QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
+    if (targetDeck->manualSchedule.contains(todayStr)) {
+        int todayPlan = targetDeck->manualSchedule.value(todayStr);
+        if (todayPlan == -1) {
+            qDebug() << "AppController 软拦截: 用户已为" << deckName << "安排了休假。直接放行！";
+            // 伪造一个复习完成的假象，给予用户强烈的正反馈
+            m_mainWindow->showFinishedSummaryPage();
+            m_mainWindow->updateProgressView(0, 0);
+            return; // 核心：直接 return，阻止 ReviewController 启动！
+        }
     }
 
     // 文件路径从已解析的目录构建，与 initializeControllers 保持一致
@@ -321,5 +345,68 @@ void AppController::handleAppQuit() {
 
     qDebug() << "AppController 全局清算: 确认所有牌组数据无损，允许 Qt 核心事件循环安全退出。";
 }
+QMap<QDate, QStringList> AppController::getCalendarData(int year, int month) {
+    QMap<QDate, QStringList> calendarData;
 
+    // 遍历所有牌组，计算该月每一天需要复习哪些牌组
+    for (const auto& deck : m_deckController->getDecks()) {
+
+        // 步骤 1：先读取底层的自然算法到期日 (生物钟)
+        for (const auto& cardPtr : deck.cards) {
+            if (cardPtr) {
+                QDate naturalDate = cardPtr->nextReviewDate;
+                if (naturalDate.year() == year && naturalDate.month() == month) {
+                    // 如果这天本来就要复习这个牌组，且还没记录过，就加进去
+                    if (!calendarData[naturalDate].contains(deck.deckName)) {
+                        calendarData[naturalDate].append(deck.deckName);
+                    }
+                }
+            }
+        }
+
+        // 步骤 2：覆盖层，应用用户的 manualSchedule 计划表
+        for (auto it = deck.manualSchedule.constBegin(); it != deck.manualSchedule.constEnd(); ++it) {
+            QDate schedDate = QDate::fromString(it.key(), "yyyy-MM-dd");
+            if (schedDate.year() == year && schedDate.month() == month) {
+                int status = it.value();
+
+                if (status == -1) {
+                    // 强制休假：无情地从当天的待复习列表中剔除该牌组
+                    calendarData[schedDate].removeAll(deck.deckName);
+                } else if (status == 1) {
+                    // 强制复习：如果当天列表没有这个牌组，强行加上去
+                    if (!calendarData[schedDate].contains(deck.deckName)) {
+                        calendarData[schedDate].append(deck.deckName);
+                    }
+                }
+            }
+        }
+    }
+    return calendarData;
+}
+
+void AppController::handleUpdateDeckSchedule(const QString& deckName, const QDate& date, int status) {
+    qDebug() << "AppController 调度: 用户修改日历计划 -> 牌组:" << deckName << "日期:" << date << "状态:" << status;
+
+    Model::Deck* targetDeck = nullptr;
+    for (const auto& deck : m_deckController->getDecks()) {
+        if (deck.deckName == deckName) {
+            targetDeck = const_cast<Model::Deck*>(&deck);
+            break;
+        }
+    }
+
+    if (!targetDeck) return;
+
+    QString dateStr = date.toString("yyyy-MM-dd");
+    if (status == 0) {
+        targetDeck->manualSchedule.remove(dateStr); // 0代表清除用户设置，恢复算法默认
+    } else {
+        targetDeck->manualSchedule[dateStr] = status; // 写入 1 (复习) 或 -1 (休假)
+    }
+
+    // ⚠️ 极其关键：修改完内存后，必须立刻落盘保存，防止数据丢失！
+    // 因为这里需要调用持久化，我们需要确认你的底层是如何存整个牌组的。
+    // (见下方说明，稍后我们一起把这一行补全)
+}
 } // namespace MindPalace::Controller
