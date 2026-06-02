@@ -472,3 +472,15 @@ void MainWindow::setupStyles() {
 
     setStyleSheet(QString::fromUtf8(qssFile.readAll()));
 }
+
+void MainWindow::updateSummaryStats(int totalCards, double masteryRate, int totalReviews) {
+    // 将小数转换为百分比显示，保留一位小数
+    QString rateStr = QString::number(masteryRate * 100.0, 'f', 1) + "%";
+
+    reviewStatsLabel->setText(
+        tr("总卡片数: %1\n掌握率: %2\n已复习卡片数: %3")
+        .arg(totalCards)
+        .arg(rateStr)
+        .arg(totalReviews)
+    );
+}

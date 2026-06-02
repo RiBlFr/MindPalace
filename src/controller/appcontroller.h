@@ -47,6 +47,9 @@ namespace MindPalace::Controller {
         std::unique_ptr<MainWindow> m_mainWindow;
         QString m_decksDirPath;
 
+        // 用于在复习期间记忆当前牌组的名称
+        QString m_currentReviewingDeckName;
+
         // ==========================================
         // 2. 初始化流水线
         // ==========================================

@@ -13,6 +13,19 @@ class DeckController : public QObject {
     Q_OBJECT         // 【新增】Qt 元对象宏，告诉编译器这个类有信号和槽
 
 public:
+    // ==========================================
+    // 【新增】数据统计专用结构体
+    // ==========================================
+    struct DeckStats {
+        int totalCards = 0;      // 总卡片数
+        int totalReviews = 0;    // 累计复习次数
+        double masteryRate = 0.0;// 掌握率 (0.0 ~ 1.0)
+    };
+
+    /**
+     * @brief 获取指定牌组的实时统计数据
+     */
+    DeckStats getDeckStats(const QString& deckName) const;
     /**
      * @brief 构造牌组控制器，并自动从磁盘加载已有牌组。
      * @param decksDirPath 牌组 JSON 文件所在目录，默认为 data/decks。

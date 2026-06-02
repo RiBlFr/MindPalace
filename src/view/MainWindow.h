@@ -37,6 +37,11 @@ public:
     void updateDeckListView(const std::vector<QString>& deckNames) const;
 
     /**
+     * @brief 更新右下角的“总体统计”面板
+     */
+    void updateSummaryStats(int totalCards, double masteryRate, int totalReviews);
+
+    /**
      * @brief 渲染卡片正面（提问态）
      * @param hasNextCard 是否还有更多待复习卡片（用于控制背景叠层阴影卡的显示）
      */

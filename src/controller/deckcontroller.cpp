@@ -449,5 +449,33 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
     emit signal_deckListChanged();
     return true;
 }
+    DeckController::DeckStats DeckController::getDeckStats(const QString& deckName) const {
+    DeckStats stats; // 默认初始化，各项均为 0
 
+    const Model::Deck* deck = findDeckByName(deckName);
+    if (!deck || deck->cards.empty()) {
+        return stats; // 如果牌组不存在或为空，直接返回 0 数据
+    }
+
+    stats.totalCards = static_cast<int>(deck->cards.size());
+    int masteredCount = 0;
+
+    for (const auto& cardPtr : deck->cards) {
+        if (!cardPtr) continue;
+
+        // 1. 累计复习次数：将每张卡片的成功复习次数累加
+        stats.totalReviews += cardPtr->repetitions;
+
+        // 2. 核心算法：判断是否为“已掌握”卡片 (Mature Card)
+        // 规则：复习间隔 >= 21 天，或连续成功复习 >= 4 次
+        if (cardPtr->interval >= 21.0f || cardPtr->repetitions >= 4) {
+            masteredCount++;
+        }
+    }
+
+    // 3. 计算掌握率 (防零除保护已在顶部处理)
+    stats.masteryRate = static_cast<double>(masteredCount) / stats.totalCards;
+
+    return stats;
+}
 } // namespace MindPalace::Controller
