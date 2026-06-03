@@ -38,6 +38,26 @@ namespace MindPalace::Controller {
          */
         void start();
 
+        // 日历看板专用查询接口
+        // ==========================================
+        /**
+         * @brief 获取指定月份的总体复习计划分布
+         * @return 映射表：具体的某一天 -> 那天需要复习的牌组名称列表
+         */
+        QMap<QDate, QStringList> getCalendarData(int year, int month);
+
+    public slots: // 注意：可以放在 public slots 下，方便未来与 UI 信号绑定
+        // ==========================================
+        // 【新增】日历看板专用修改接口
+        // ==========================================
+        /**
+         * @brief 修改指定牌组在某天的复习状态（软覆盖算法）
+         * @param deckName 牌组名称
+         * @param date 目标日期
+         * @param status 1代表强制复习，-1代表休假，0代表清除手动计划（恢复算法）
+         */
+        void handleUpdateDeckSchedule(const QString& deckName, const QDate& date, int status);
+
     private:
         // ==========================================
         // 1. 核心组件托管区 (RAII).
@@ -70,6 +90,7 @@ namespace MindPalace::Controller {
     private:
         void refreshDeckList();
     };
+
 
 } // namespace MindPalace::Controller
 

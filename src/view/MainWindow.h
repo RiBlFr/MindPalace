@@ -4,6 +4,9 @@
 #include <QMainWindow>
 #include <QString>
 #include <vector>
+#include <QDate>
+#include <QMap>
+#include <QStringList>
 
 #include "CardManagerDialog.h"
 
@@ -81,6 +84,12 @@ public:
      */
     Q_INVOKABLE void notifyCardFlipped(bool flipped);
 
+    /**
+     * @brief 接收大脑传回的日历数据，并驱动日历面板重新绘制
+     * @param calendarData 映射表：具体的某一天 -> 那天需要复习的牌组名称列表
+     */
+    void updateCalendarBoard(const QMap<QDate, QStringList>& calendarData);
+
 private:
     // UI 初始化
     void initUI();
@@ -108,6 +117,20 @@ signals:
                                   const QString& newFront, const QString& newBack);
     void signal_requestImportDeck(const QString& filePath);
     void signal_requestRefreshDeck(const QString& deckName);
+    /**
+     * @brief 请求获取指定月份的日历排期数据
+     * @param year 年份
+     * @param month 月份
+     */
+    void signal_requestCalendarData(int year, int month, QMap<QDate, QStringList>& outData);
+
+    /**
+     * @brief 用户在日历看板上发起了强制调期请求
+     * @param deckName 目标牌组名称
+     * @param date 用户点击的日期
+     * @param status 1(强制复习), -1(强制休假), 0(清除自定义计划)
+     */
+    void signal_requestUpdateSchedule(const QString& deckName, const QDate& date, int status);
 
 private slots:
     // Monitors QML's "flipped" property change to emit signal_requestShowAnswer.
@@ -126,6 +149,9 @@ private:
     QPushButton *addDeckBtn{};
     QPushButton *deleteDeckBtn{};
     QPushButton *resetDeckBtn{};
+
+    // 打开日历看板的入口按钮
+    QPushButton *calendarBtn{};
 
     // ===== 中央看板区 =====
     QWidget *centerPanel{};

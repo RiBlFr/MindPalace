@@ -32,7 +32,7 @@ Model::Card* ReviewController::currentCard() const {
 // 2. 复习会话启动与队列构建
 // =========================================================================
 
-bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePath) {
+bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePath, bool forceReview) {
     // 参数无效：没有有效牌组时不能启动复习会话。
     if (!deck) {
         qWarning() << "startReview failed: deck is null.";
@@ -51,7 +51,10 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
 
     activeDeck = deck;
     activeDeckFilePath = deckFilePath;
-    buildReviewQueue();
+
+    // 【修改点】向下传递强制复习指令
+    buildReviewQueue(forceReview);
+
     totalReviewCount = static_cast<int>(reviewQueue.size());
 
     if (reviewQueue.empty()) {
@@ -64,7 +67,7 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
     return true;
 }
 
-void ReviewController::buildReviewQueue() {
+void ReviewController::buildReviewQueue(bool forceReview) {
     clearQueue();
 
     if (!activeDeck) {
@@ -72,7 +75,7 @@ void ReviewController::buildReviewQueue() {
     }
 
     for (const auto& card : activeDeck->cards) {
-        if (card && card->isDue()) {
+        if (card && (forceReview || card->isDue())) {
             reviewQueue.push(card.get());
         }
     }

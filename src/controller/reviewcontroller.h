@@ -36,12 +36,13 @@ public:
      * @brief 开始一次牌组复习，并筛选出今日到期的卡片。
      * @param deck 待复习的牌组。复习过程中会直接修改其中的卡片状态。
      * @param deckFilePath 该牌组对应的 JSON 文件路径，用于评分后立即保存。
+     * @param forceReview 特权通道标志。为 true 时将无视算法，提取该牌组内所有卡片进入队列。
      * @return 存在可复习卡片时返回 true；没有到期卡片或参数无效时返回 false。
      * 成功进入提问态时，会立即触发 signal_showQuestion() 广播第一张卡片正面文本。
      * 注意：需要deckFilePath是因为想把deckcontroller 和 reviewcontroller分开
      * 可以从reviewcontroller.h得到filepath
      */
-    bool startReview(Model::Deck* deck, const QString& deckFilePath);
+    bool startReview(Model::Deck* deck, const QString& deckFilePath, bool forceReview = false);
 
     /**
      * @brief 获取当前复习状态。
@@ -115,7 +116,11 @@ private:
     int totalReviewCount = 0;
     ReviewState state = ReviewState::FinishedState;
 
-    void buildReviewQueue();
+    /**
+     * @brief 构建复习队列
+     * @param forceReview 【新增】是否开启无视算法的强制备考模式
+     */
+    void buildReviewQueue(bool forceReview = false);
     void clearQueue();
 };
 
