@@ -35,13 +35,20 @@ void setBackground(QWidget *widget, const QColor &color) {
     }
 }
 
-void setGradientBackground(QWidget *widget) {
+void setGradientBackground(QWidget *widget, bool isAurora) {
     if (widget->objectName().isEmpty()) {
         widget->setObjectName("gradientBgWidget");
     }
-    // 【关键修复】使用 += 追加样式，绝不破坏原有加载的全局 QSS 样式表
-    QString newStyle = QString("#%1 { background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #e0c3fc, stop:1 #8ec5fc); }").arg(widget->objectName());
-    widget->setStyleSheet(widget->styleSheet() + "\n" + newStyle);
+
+    if (isAurora) {
+        // 极光模式：紫蓝渐变
+        QString newStyle = QString("#%1 { background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #e0c3fc, stop:1 #8ec5fc); }").arg(widget->objectName());
+        widget->setStyleSheet(widget->styleSheet() + "\n" + newStyle);
+    } else {
+        // 经典模式：纯白/浅灰底色
+        QString newStyle = QString("#%1 { background: #f7f8fb; }").arg(widget->objectName());
+        widget->setStyleSheet(widget->styleSheet() + "\n" + newStyle);
+    }
 }
 
 void setTextColor(QWidget *widget, const QColor &color) {
@@ -71,25 +78,8 @@ void addSoftShadow(QWidget *widget) {
 }
 
 void markSurface(QFrame *frame, bool shadow) {
+    Q_UNUSED(shadow);
     frame->setProperty("role", "surface");
-
-    // 【核心重构】真正的玻璃拟态质感层
-    // 1. 设置带透明度的底层颜色
-    // 2. 增加 1px 的 rgba(255,255,255,220) 白色高光内描边
-    // 3. 将卡片的圆角拉大到 16px，更符合现代果味(Apple-like)审美
-    QString style = QString(
-        "QFrame[role=\"surface\"] {"
-        "   background-color: rgba(%1, %2, %3, %4);"
-        "   border: 1px solid rgba(255, 255, 255, 220);"
-        "   border-radius: 16px;"
-        "}"
-    ).arg(Theme::Surface.red()).arg(Theme::Surface.green()).arg(Theme::Surface.blue()).arg(Theme::Surface.alpha());
-
-    frame->setStyleSheet(style);
-
-    if (shadow) {
-        addSoftShadow(frame);
-    }
 }
 
 void setButtonFont(QPushButton *button, int pointSize) {

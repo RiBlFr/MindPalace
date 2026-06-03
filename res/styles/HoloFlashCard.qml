@@ -3,6 +3,9 @@ import QtQuick
 Item {
     id: root
 
+    // 监听 C++ 传进来的 themeMode（1 为极光，0 为经典）
+    property bool isAurora: typeof _reviewBridge !== "undefined" ? _reviewBridge.themeMode === 1 : true
+
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."
     property bool flipped: false
@@ -18,12 +21,6 @@ Item {
     property real bodyOffsetY: 0
 
     signal cardClicked(bool flipped)
-
-    Rectangle {
-        color: "#D9FFFFFF"
-        border.color: "#FFFFFF"
-        border.width: 1.5
-    }
 
     Item {
         id: card
@@ -134,17 +131,20 @@ Item {
 
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
+
                     GradientStop {
                         position: 0.0
-                        color: Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
+                        color: Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
                     }
+
                     GradientStop {
                         position: 0.5 + (root.shineX - 0.5) * 0.4
-                        color: Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
+                        color: Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
                     }
+
                     GradientStop {
                         position: 1.0
-                        color: Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
+                        color: Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
                     }
                 }
 
@@ -350,7 +350,7 @@ Item {
                     Text {
                         width: parent.width
                         text: "再次点击回到正面"
-                        color: "#fce7f3"
+                        color: "white"
                         horizontalAlignment: Text.AlignHCenter
                         font.pixelSize: 15
                         opacity: 0.9

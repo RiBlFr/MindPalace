@@ -26,12 +26,23 @@ class QStackedWidget;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
+    Q_PROPERTY(int themeMode READ themeMode NOTIFY themeModeChanged)
+
 public:
+    // 定义主题枚举：0为经典蓝，1为极光玻璃
+    enum class ThemeMode { Classic = 0, Aurora = 1 };
+
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+    // 获取当前主题的 Getter
+    int themeMode() const { return static_cast<int>(m_themeMode); }
+
+    // 应用新主题的执行函数
+    void applyTheme(ThemeMode mode);
+
     // ==========================================
-    // 【新增】对外暴露的被动渲染接口 (供 AppController 调用).
+    // 对外暴露的被动渲染接口 (供 AppController 调用).
     // ==========================================
 
     /**
@@ -109,6 +120,8 @@ private:
     QWidget* setupFeedbackButtons();
 
 signals:
+    void themeModeChanged();
+
     void signal_requestStartReview(const QString& deckName);
     void signal_requestSubmitFeedback(int quality);
     void signal_requestShowAnswer();
@@ -144,11 +157,16 @@ private slots:
     // system, unlike user-defined QML signals which can fail with the SIGNAL macro.
     void onQmlFlippedPropertyChanged();
 
+    // 弹出偏好设置对话框的槽函数
+    void showPreferencesDialog();
+
 protected:
     // 重写关闭事件，用于拦截右上角的红叉
     void closeEvent(QCloseEvent *event) override;
 
 private:
+    ThemeMode m_themeMode = ThemeMode::Aurora; // 默认极光模式
+
     // ===== 左侧导航面板 =====
     QWidget *leftPanel{};
     QListWidget *deckListWidget{};
