@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <vector>
 #include <QStringList>
-#include <QVariantAnimation>
+#include <QVariantAnimation> // 引入动画引擎
 
 class WeeklyChartWidget : public QWidget {
     Q_OBJECT
@@ -22,6 +22,7 @@ private:
     std::vector<int> m_data;
     QStringList m_labels;
 
+    // 动画引擎与进度变量
     QVariantAnimation *m_animation;
     qreal m_animProgress;
 };
