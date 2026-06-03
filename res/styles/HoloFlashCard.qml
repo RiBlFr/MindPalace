@@ -3,6 +3,9 @@ import QtQuick
 Item {
     id: root
 
+    // 监听 C++ 传进来的 themeMode（1 为极光，0 为经典）
+    property bool isAurora: typeof _reviewBridge !== "undefined" ? _reviewBridge.themeMode === 1 : true
+
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."
     property bool flipped: false
@@ -18,11 +21,6 @@ Item {
     property real bodyOffsetY: 0
 
     signal cardClicked(bool flipped)
-
-    Rectangle {
-        anchors.fill: parent
-        color: "transparent"
-    }
 
     Item {
         id: card
@@ -71,13 +69,43 @@ Item {
         layer.enabled: true
         layer.smooth: true
 
-        Rectangle {
-            id: shadow
+        Item {
+            id: shadowGroup
             anchors.fill: cardBody
-            anchors.topMargin: 18
-            radius: cardBody.radius
-            color: "#25304a"
-            opacity: root.hovered ? 0.22 : 0.13
+            // 鼠标悬浮时，阴影整体加深，配合卡片的放大效果
+            opacity: root.hovered ? 1.0 : 0.55
+            z: -1 // 确保阴影永远在卡片底层
+
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
+
+            // 第一层：最广阔的环境光遮蔽（超大范围，极浅颜色）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -16
+                anchors.topMargin: 8
+                radius: cardBody.radius + 16
+                color: "#08102040" // 带有深蓝紫基调的超低透明度
+            }
+
+            // 第二层：主光源投影（中等范围，起过渡作用）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -8
+                anchors.topMargin: 18
+                radius: cardBody.radius + 8
+                color: "#0C102040"
+            }
+
+            // 第三层：实体接触阴影（贴近卡片底部，颜色最深，营造重量感）
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -2
+                anchors.topMargin: 26
+                radius: cardBody.radius + 2
+                color: "#12102040"
+            }
         }
 
         Rectangle {
@@ -103,17 +131,20 @@ Item {
 
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
+
                     GradientStop {
                         position: 0.0
-                        color: Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
+                        color: Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
                     }
+
                     GradientStop {
                         position: 0.5 + (root.shineX - 0.5) * 0.4
-                        color: Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
+                        color: Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
                     }
+
                     GradientStop {
                         position: 1.0
-                        color: Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
+                        color: Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
                     }
                 }
 
@@ -319,7 +350,7 @@ Item {
                     Text {
                         width: parent.width
                         text: "再次点击回到正面"
-                        color: "#fce7f3"
+                        color: "white"
                         horizontalAlignment: Text.AlignHCenter
                         font.pixelSize: 15
                         opacity: 0.9
