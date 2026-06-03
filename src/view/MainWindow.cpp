@@ -37,6 +37,7 @@
 #include "CardManagerDialog.h"
 #include "StyledDialogs.h"
 #include "ScheduleCalendarDialog.h"
+#include "service/storagemanager.h"
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -477,6 +478,33 @@ void MainWindow::setupRightPanel() {
     summaryLayout->addWidget(reviewStatsLabel);
 
     rightLayout->addWidget(summaryFrame);
+
+    rightLayout->addStretch();
+
+    // ==========================================
+    // 近七日趋势图表区
+    // ==========================================
+    auto *chartTitle = new QLabel(tr("近七日复习趋势"));
+    setLabelStyle(chartTitle, 12, QFont::DemiBold);
+    rightLayout->addWidget(chartTitle);
+
+    auto *chartFrame = new QFrame;
+    markSurface(chartFrame); // 使用你封装好的卡片样式工具
+    auto *chartFrameLayout = new QVBoxLayout(chartFrame);
+    chartFrameLayout->setContentsMargins(10, 10, 10, 10);
+
+    weeklyChartWidget = new WeeklyChartWidget(this);
+
+    // 【修改】初始化时读取一次真实数据
+    std::vector<int> initData;
+    QStringList initLabels;
+    // 提示：你需要在 MainWindow.cpp 顶部引入 #include "service/storagemanager.h"
+    MindPalace::Service::StorageManager::getWeeklyReviewData(initData, initLabels);
+    weeklyChartWidget->setData(initData, initLabels);
+
+    chartFrameLayout->addWidget(weeklyChartWidget);
+    rightLayout->addWidget(chartFrame);
+
     rightLayout->addStretch();
 }
 
@@ -515,4 +543,10 @@ void MainWindow::updateSummaryStats(int totalCards, double masteryRate, int tota
         .arg(rateStr)
         .arg(totalReviews)
     );
+}
+
+void MainWindow::updateWeeklyChart(const std::vector<int>& data, const QStringList& labels) {
+    if (weeklyChartWidget) {
+        weeklyChartWidget->setData(data, labels);
+    }
 }

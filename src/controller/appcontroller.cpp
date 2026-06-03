@@ -318,6 +318,19 @@ void AppController::handleSubmitFeedback(int quality) {
         qCritical() << "AppController 核心灾难: 闪卡参数更新或本地 JSON 文件原子化落盘失败！状态已回滚。";
     }
 
+    // ==========================================
+    // 核心埋点：成功复习一张，打卡记录 +1
+    // ==========================================
+    Service::StorageManager::incrementDailyReviewCount();
+
+    // ==========================================
+    // 提取最新 7 天数据，驱动 UI 图表刷新
+    // ==========================================
+    std::vector<int> chartData;
+    QStringList chartLabels;
+    Service::StorageManager::getWeeklyReviewData(chartData, chartLabels);
+    m_mainWindow->updateWeeklyChart(chartData, chartLabels);
+
     if (!m_currentReviewingDeckName.isEmpty()) {
         auto stats = m_deckController->getDeckStats(m_currentReviewingDeckName);
         m_mainWindow->updateSummaryStats(stats.totalCards, stats.masteryRate, stats.totalReviews);

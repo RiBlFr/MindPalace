@@ -7,6 +7,8 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <utility>
+#include <QDate>
+#include <QCoreApplication>
 
 namespace MindPalace::Service {
 
@@ -133,5 +135,62 @@ bool StorageManager::loadDeck(const QString& filePath, Model::Deck& deck, Storag
 bool StorageManager::loadDeck(const QString& filePath, Model::Deck& deck) {
     return loadDeck(filePath, deck, nullptr);
 }
+    void StorageManager::incrementDailyReviewCount() {
+    // 1. 确定文件路径 (与你存卡组的 data/ 目录平级)
+    QString logPath = QCoreApplication::applicationDirPath() + "/data/review_log.json";
+    QJsonObject logObj;
 
+    // 2. 如果文件存在，先读出旧账本
+    QFile file(logPath);
+    if (file.open(QIODevice::ReadOnly)) {
+        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        logObj = doc.object();
+        file.close();
+    }
+
+    // 3. 给今天的数字 +1
+    QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
+    int currentCount = logObj.value(todayStr).toInt(0);
+    logObj[todayStr] = currentCount + 1;
+
+    // 4. 写回硬盘
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(QJsonDocument(logObj).toJson());
+        file.close();
+    }
+}
+
+    void StorageManager::getWeeklyReviewData(std::vector<int>& outData, QStringList& outLabels) {
+    outData.clear();
+    outLabels.clear();
+
+    QString logPath = QCoreApplication::applicationDirPath() + "/data/review_log.json";
+    QJsonObject logObj;
+
+    QFile file(logPath);
+    if (file.open(QIODevice::ReadOnly)) {
+        logObj = QJsonDocument::fromJson(file.readAll()).object();
+        file.close();
+    }
+
+    QDate today = QDate::currentDate();
+
+    // 往前推 6 天，加上今天，一共 7 天
+    for (int i = 6; i >= 0; --i) {
+        QDate d = today.addDays(-i);
+        QString dateStr = d.toString("yyyy-MM-dd");
+
+        // 获取那一天的复习量，没有记录就是 0
+        outData.push_back(logObj.value(dateStr).toInt(0));
+
+        // 生成漂亮的标签
+        if (i == 0) {
+            outLabels.append("今");
+        } else {
+            // 将 1-7 映射为中文星期
+            QStringList weekNames = {"", "一", "二", "三", "四", "五", "六", "日"};
+            outLabels.append("周" + weekNames[d.dayOfWeek()]);
+        }
+    }
+}
 } // namespace MindPalace::Service
