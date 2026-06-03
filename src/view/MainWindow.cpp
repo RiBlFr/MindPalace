@@ -36,6 +36,8 @@
 
 #include "CardManagerDialog.h"
 #include "StyledDialogs.h"
+#include "ScheduleCalendarDialog.h"
+#include "service/storagemanager.h"
 
 MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent) {
@@ -243,6 +245,37 @@ void MainWindow::setupLeftPanel() {
     setButtonFont(addDeckBtn, 11);
     leftLayout->addWidget(addDeckBtn);
 
+    // ==========================================
+    // 日历看板入口按钮
+    // ==========================================
+    // 增加一点间距，让它和上面的破坏性操作（删除/重置）隔开
+    leftLayout->addSpacing(16);
+
+    calendarBtn = new QPushButton(tr("📅 复习日历"));
+    calendarBtn->setProperty("variant", "primary"); // 使用主题色
+    calendarBtn->setMinimumHeight(44);
+    setButtonFont(calendarBtn, 12);
+    leftLayout->addWidget(calendarBtn);
+
+    // 绑定信号：点击按钮打开日历弹窗
+    connect(calendarBtn, &QPushButton::clicked, this, [this]() {
+        // 将现有的卡组名称提取出来传给日历
+        QStringList allDecks;
+        for(int i = 0; i < deckListWidget->count(); ++i) {
+            allDecks << deckListWidget->item(i)->text();
+        }
+
+        ScheduleCalendarDialog dialog(allDecks, this);
+
+        connect(&dialog, &ScheduleCalendarDialog::signal_requestCalendarData,
+                this, &MainWindow::signal_requestCalendarData);
+
+        connect(&dialog, &ScheduleCalendarDialog::signal_requestUpdateSchedule,
+                this, &MainWindow::signal_requestUpdateSchedule);
+
+        dialog.exec();
+    });
+
     deleteDeckBtn = new QPushButton(tr("删除卡组"));
     deleteDeckBtn->setProperty("variant", "danger");
     deleteDeckBtn->setMinimumHeight(40);
@@ -445,6 +478,33 @@ void MainWindow::setupRightPanel() {
     summaryLayout->addWidget(reviewStatsLabel);
 
     rightLayout->addWidget(summaryFrame);
+
+    rightLayout->addStretch();
+
+    // ==========================================
+    // 近七日趋势图表区
+    // ==========================================
+    auto *chartTitle = new QLabel(tr("近七日复习趋势"));
+    setLabelStyle(chartTitle, 12, QFont::DemiBold);
+    rightLayout->addWidget(chartTitle);
+
+    auto *chartFrame = new QFrame;
+    markSurface(chartFrame); // 使用你封装好的卡片样式工具
+    auto *chartFrameLayout = new QVBoxLayout(chartFrame);
+    chartFrameLayout->setContentsMargins(10, 10, 10, 10);
+
+    weeklyChartWidget = new WeeklyChartWidget(this);
+
+    // 【修改】初始化时读取一次真实数据
+    std::vector<int> initData;
+    QStringList initLabels;
+    // 提示：你需要在 MainWindow.cpp 顶部引入 #include "service/storagemanager.h"
+    MindPalace::Service::StorageManager::getWeeklyReviewData(initData, initLabels);
+    weeklyChartWidget->setData(initData, initLabels);
+
+    chartFrameLayout->addWidget(weeklyChartWidget);
+    rightLayout->addWidget(chartFrame);
+
     rightLayout->addStretch();
 }
 
@@ -483,4 +543,10 @@ void MainWindow::updateSummaryStats(int totalCards, double masteryRate, int tota
         .arg(rateStr)
         .arg(totalReviews)
     );
+}
+
+void MainWindow::updateWeeklyChart(const std::vector<int>& data, const QStringList& labels) {
+    if (weeklyChartWidget) {
+        weeklyChartWidget->setData(data, labels);
+    }
 }
