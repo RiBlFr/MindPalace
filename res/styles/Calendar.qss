@@ -1,0 +1,89 @@
+/* =======================================================
+   复习计划看板 ScheduleCalendarDialog 美化样式
+======================================================= */
+QDialog#scheduleCalendar {
+    background: #f7f8fb;
+}
+
+QLabel#calendarTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+QLabel#calendarHint {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* ---- 日历整体容器 ---- */
+QCalendarWidget#calendarView {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+}
+
+/* ---- 顶部导航栏 ---- */
+QCalendarWidget#calendarView QWidget#qt_calendar_navigationbar {
+    background-color: #5688b8;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    min-height: 48px;
+}
+
+/* 月份 / 年份 / 翻页箭头按钮 */
+QCalendarWidget#calendarView QToolButton {
+    color: #ffffff;
+    background-color: transparent;
+    border: none;
+    margin: 7px 2px;
+    padding: 4px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    icon-size: 18px;
+}
+QCalendarWidget#calendarView QToolButton:hover {
+    background-color: rgba(255, 255, 255, 45);
+    border-radius: 8px;
+}
+QCalendarWidget#calendarView QToolButton:pressed {
+    background-color: rgba(255, 255, 255, 75);
+    border-radius: 8px;
+}
+QCalendarWidget#calendarView QToolButton::menu-indicator {
+    image: none;
+}
+
+/* 年份编辑框（点击年份后出现） */
+QCalendarWidget#calendarView QSpinBox {
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 2px 6px;
+    selection-background-color: #5688b8;
+    selection-color: #ffffff;
+}
+
+/* ---- 星期表头 ---- */
+QCalendarWidget#calendarView QHeaderView::section {
+    background: #ffffff;
+    color: #94a3b8;
+    padding: 8px 0;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ---- 日期网格视图 ---- */
+QCalendarWidget#calendarView QAbstractItemView {
+    outline: none;
+    background: #ffffff;
+    border: none;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    color: #334155;
+    font-size: 13px;
+    selection-background-color: transparent;
+    selection-color: #334155;
+}
