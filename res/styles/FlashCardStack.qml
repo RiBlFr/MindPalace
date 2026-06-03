@@ -273,10 +273,7 @@ Item {
         }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: "transparent"
-    }
+   
 
     Item {
         id: stackLayer

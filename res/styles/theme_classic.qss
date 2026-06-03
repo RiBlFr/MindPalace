@@ -1,0 +1,109 @@
+/* =======================================================
+   【经典扁平模式】 Theme Classic
+======================================================= */
+/* 1. 干净的纯白/浅灰底色 */
+#mainWindowRoot { background-color: #f7f8fb; }
+QWidget[panel="side"] { background-color: #f3f6fa; }
+#centerPanel { background-color: transparent; }
+
+/* 2. 顶部菜单栏 */
+QMenuBar { background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+QMenuBar::item { padding: 6px 10px; border-radius: 6px; color: #1f2937; background: transparent; }
+QMenuBar::item:selected { background: #eef2ff; color: #2563eb; }
+QMenu { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; }
+QMenu::item { padding: 7px 28px 7px 18px; border-radius: 6px; color: #1f2937; }
+QMenu::item:selected { background: #eff6ff; color: #2563eb; }
+
+/* 3. 左侧卡组列表 */
+QListWidget#deckList { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 6px; outline: none; }
+QListWidget#deckList::item { padding: 10px 12px; margin: 2px; border-radius: 8px; color: #334155; }
+QListWidget#deckList::item:hover { background: #eff6ff; color: #1d4ed8; }
+QListWidget#deckList::item:selected { background: #2563eb; color: #ffffff; }
+
+/* 4. 右侧数据卡片 (无阴影) */
+QFrame[role="surface"] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; }
+
+/* 5. 进度条 */
+QProgressBar#dailyProgress { height: 18px; border: none; border-radius: 9px; background: #e5e7eb; text-align: center; color: #334155; font-size: 11px; font-weight: bold; }
+QProgressBar#dailyProgress::chunk { border-radius: 9px; background: #2563eb; }
+
+QPushButton {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: #e5e7eb;
+    color: #1f2937;
+    font-weight: bold;
+}
+QPushButton:pressed {
+    padding-top: 2px;
+}
+
+QPushButton#btnAddDeck, QPushButton#btnCalendar {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+QPushButton#btnAddDeck:hover, QPushButton#btnCalendar:hover {
+    background-color: #1d4ed8;
+}
+
+QPushButton#btnDeleteDeck {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+QPushButton#btnDeleteDeck:hover {
+    background-color: #dc2626;
+}
+
+QPushButton#btnResetDeck {
+    background-color: #f97316;
+    color: #ffffff;
+}
+QPushButton#btnResetDeck:hover {
+    background-color: #ea580c;
+}
+
+QPushButton#btnShowAnswer {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 14px;
+}
+QPushButton#btnShowAnswer:hover {
+    background-color: #1d4ed8;
+}
+
+QPushButton#btnForget {
+    background-color: #ef4444;
+    color: #ffffff;
+    border-radius: 12px;
+}
+QPushButton#btnForget:hover {
+    background-color: #dc2626;
+}
+
+QPushButton#btnHard {
+    background-color: #f97316;
+    color: #ffffff;
+    border-radius: 12px;
+}
+QPushButton#btnHard:hover {
+    background-color: #ea580c;
+}
+
+QPushButton#btnNormal {
+    background-color: #eab308;
+    color: #ffffff;
+    border-radius: 12px;
+}
+QPushButton#btnNormal:hover {
+    background-color: #ca8a04;
+}
+
+QPushButton#btnEasy {
+    background-color: #22c55e;
+    color: #ffffff;
+    border-radius: 12px;
+}
+QPushButton#btnEasy:hover {
+    background-color: #16a34a;
+}

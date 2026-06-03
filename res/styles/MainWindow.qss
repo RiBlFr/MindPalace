@@ -1,58 +1,45 @@
-QMainWindow {
-    background: #f7f8fb;
-}
-
+/* =======================================================
+   1. 顶部菜单栏 (全局玻璃质感)
+======================================================= */
 QMenuBar {
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-    padding: 2px;
+    background-color: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 80);
 }
-
 QMenuBar::item {
-    padding: 6px 10px;
+    background: transparent;
+    padding: 8px 12px;
+    margin: 4px 2px;
     border-radius: 6px;
     color: #1f2937;
 }
-
 QMenuBar::item:selected {
-    background: #eef2ff;
-    color: #2563eb;
+    background: rgba(255, 255, 255, 100);
 }
-
 QMenu {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background-color: rgba(255, 255, 255, 220);
+    border: 1px solid rgba(255, 255, 255, 200);
     border-radius: 8px;
-    padding: 6px;
+    padding: 4px;
 }
-
 QMenu::item {
-    padding: 7px 28px 7px 18px;
-    border-radius: 6px;
+    padding: 6px 24px 6px 12px;
+    border-radius: 4px;
     color: #1f2937;
 }
-
 QMenu::item:selected {
-    background: #eff6ff;
-    color: #2563eb;
+    background-color: rgba(139, 117, 250, 40); /* 淡淡的长春花蓝选中态 */
+    color: #8B75FA;
 }
 
-QWidget[panel="side"] {
-    background: #f3f6fa;
-}
-
-QFrame[role="surface"] {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-}
-
+/* =======================================================
+   2. 左侧卡组列表 (毛玻璃质感与新主题色)
+======================================================= */
 QListWidget#deckList {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background-color: rgba(255, 255, 255, 140); /* 融入背景的半透明白 */
+    border: 1px solid rgba(255, 255, 255, 200);
     border-radius: 12px;
     padding: 6px;
-    outline: none;
+    outline: none; /* 去除点击时难看的虚线框 */
 }
 
 QListWidget#deckList::item {
@@ -63,84 +50,172 @@ QListWidget#deckList::item {
 }
 
 QListWidget#deckList::item:hover {
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: rgba(255, 255, 255, 180);
+    color: #8B75FA;
 }
 
 QListWidget#deckList::item:selected {
-    background: #2563eb;
+    background: #8B75FA; /* 长春花蓝高亮 */
     color: #ffffff;
 }
 
-QPushButton {
-    min-height: 34px;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-QPushButton[variant="primary"] {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-QPushButton:hover[variant="primary"] {
-    background: #1d4ed8;
-}
-
-QPushButton[variant="danger"] {
-    background: #ef4444;
-    color: #ffffff;
-}
-
-QPushButton:hover[variant="danger"] {
-    background: #dc2626;
-}
-
-QPushButton[variant="warning"] {
-    background: #f97316;
-    color: #ffffff;
-}
-
-QPushButton:hover[variant="warning"] {
-    background: #ea580c;
-}
-
-QPushButton[variant="normal"] {
-    background: #f59e0b;
-    color: #ffffff;
-}
-
-QPushButton:hover[variant="normal"] {
-    background: #d97706;
-}
-
-QPushButton[variant="success"] {
-    background: #16a34a;
-    color: #ffffff;
-}
-
-QPushButton:hover[variant="success"] {
-    background: #15803d;
-}
-
-QPushButton:pressed {
-    padding-top: 10px;
-    padding-bottom: 6px;
-}
-
+/* =======================================================
+   3. 右侧进度条 (果冻质感)
+======================================================= */
 QProgressBar#dailyProgress {
     height: 18px;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 150);
     border-radius: 9px;
-    background: #e5e7eb;
+    background: rgba(255, 255, 255, 120); /* 浅浅的凹槽底色 */
     text-align: center;
     color: #334155;
     font-size: 11px;
+    font-weight: bold;
 }
 
 QProgressBar#dailyProgress::chunk {
-    border-radius: 9px;
-    background: #2563eb;
+    border-radius: 8px; /* 比外框稍小一点，形成内嵌感 */
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #9B88FA, stop:1 #8B75FA); /* 进度条也有微渐变 */
 }
+
+/* =======================================================
+   4. 按钮基础设定
+======================================================= */
+QPushButton {
+    outline: none; /* 去除按压虚线框 */
+}
+
+/* =======================================================
+   5. 左侧面板控制按钮
+======================================================= */
+/* 新增卡组按钮 */
+#btnAddDeck {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9B88FA, stop:1 #8B75FA);
+    color: white;
+    border-radius: 8px;
+    border: 1px solid #7A61F9;
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    font-weight: bold;
+}
+#btnAddDeck:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #AD9DFB, stop:1 #9D8AFB);
+}
+#btnAddDeck:pressed {
+    background: #7A61F9;
+    border-top: 1px solid transparent;
+    padding-top: 2px;
+}
+
+/* 复习日历按钮 */
+#btnCalendar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7D9FFB, stop:1 #638BFA);
+    color: white;
+    border-radius: 8px;
+    border: 1px solid #4A76F9;
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    font-weight: bold;
+}
+#btnCalendar:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #95B2FC, stop:1 #7D9FFB);
+}
+#btnCalendar:pressed {
+    background: #4A76F9;
+    border-top: 1px solid transparent;
+    padding-top: 2px;
+}
+
+/* 删除卡组与重置进度按钮 (危险/警告操作) */
+#btnDeleteDeck {
+    background-color: rgba(255, 255, 255, 180);
+    color: #EF4444;
+    border-radius: 8px;
+    border: 1px solid #FECACA;
+    font-weight: bold;
+}
+#btnDeleteDeck:hover { background-color: #FEE2E2; }
+#btnDeleteDeck:pressed { padding-top: 2px; }
+#btnDeleteDeck:disabled {
+    color: #FCA5A5;
+    border-color: #FEF2F2;
+    background-color: rgba(255, 255, 255, 50);
+}
+
+#btnResetDeck {
+    background-color: rgba(255, 255, 255, 180);
+    color: #F59E0B;
+    border-radius: 8px;
+    border: 1px solid #FDE68A;
+    font-weight: bold;
+}
+#btnResetDeck:hover { background-color: #FEF3C7; }
+#btnResetDeck:pressed { padding-top: 2px; }
+#btnResetDeck:disabled {
+    color: #FCD34D;
+    border-color: #FFFBEB;
+    background-color: rgba(255, 255, 255, 50);
+}
+
+/* =======================================================
+   6. 中央底部评分按钮 (高级语义化毛玻璃)
+======================================================= */
+/* 抽取四个按钮的共性，精简代码 */
+#btnForget, #btnHard, #btnNormal, #btnEasy {
+    background-color: rgba(255, 255, 255, 140);
+    border-radius: 12px;
+    font-weight: bold;
+}
+#btnForget:pressed, #btnHard:pressed, #btnNormal:pressed, #btnEasy:pressed {
+    color: white;
+    border: none;
+    padding-top: 2px;
+}
+
+/* 忘记 (危险红) */
+#btnForget {
+    color: #F43F5E;
+    border: 1.5px solid rgba(255, 255, 255, 220);
+    border-bottom: 2px solid #F43F5E;
+}
+#btnForget:hover {
+    background-color: rgba(255, 255, 255, 220);
+    border-color: #F43F5E;
+}
+#btnForget:pressed { background-color: #F43F5E; }
+
+/* 困难 (警告橙) */
+#btnHard {
+    color: #F59E0B;
+    border: 1.5px solid rgba(255, 255, 255, 220);
+    border-bottom: 2px solid #F59E0B;
+}
+#btnHard:hover {
+    background-color: rgba(255, 255, 255, 220);
+    border-color: #F59E0B;
+}
+#btnHard:pressed { background-color: #F59E0B; }
+
+/* 普通 (主题紫蓝) */
+#btnNormal {
+    color: #8B75FA;
+    border: 1.5px solid rgba(255, 255, 255, 220);
+    border-bottom: 2px solid #8B75FA;
+}
+#btnNormal:hover {
+    background-color: rgba(255, 255, 255, 220);
+    border-color: #8B75FA;
+}
+#btnNormal:pressed { background-color: #8B75FA; }
+
+/* 熟悉 (成功绿) */
+#btnEasy {
+    color: #10B981;
+    border: 1.5px solid rgba(255, 255, 255, 220);
+    border-bottom: 2px solid #10B981;
+}
+#btnEasy:hover {
+    background-color: rgba(255, 255, 255, 220);
+    border-color: #10B981;
+}
+#btnEasy:pressed { background-color: #10B981; }

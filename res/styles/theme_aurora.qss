@@ -1,0 +1,73 @@
+/* =======================================================
+   【极光毛玻璃模式】 Theme Aurora
+======================================================= */
+/* 1. 全局极光渐变背景 */
+#mainWindowRoot {
+    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #e0c3fc, stop:1 #8ec5fc);
+}
+/* 侧边栏与中央区透明度 */
+QWidget[panel="side"] { background-color: rgba(243, 246, 250, 150); }
+#centerPanel { background-color: transparent; }
+
+/* 2. 顶部菜单栏 */
+QMenuBar { background-color: transparent; border-bottom: 1px solid rgba(255, 255, 255, 80); }
+QMenuBar::item { padding: 8px 12px; margin: 4px 2px; border-radius: 6px; color: #1f2937; background: transparent;}
+QMenuBar::item:selected { background: rgba(255, 255, 255, 100); }
+QMenu { background-color: rgba(255, 255, 255, 220); border: 1px solid rgba(255, 255, 255, 200); border-radius: 8px; padding: 4px; }
+QMenu::item { padding: 6px 24px 6px 12px; border-radius: 4px; color: #1f2937; }
+QMenu::item:selected { background-color: rgba(139, 117, 250, 40); color: #8B75FA; }
+
+/* 3. 左侧卡组列表 */
+QListWidget#deckList { background-color: rgba(255, 255, 255, 140); border: 1px solid rgba(255, 255, 255, 200); border-radius: 12px; padding: 6px; outline: none; }
+QListWidget#deckList::item { padding: 10px 12px; margin: 2px; border-radius: 8px; color: #334155; }
+QListWidget#deckList::item:hover { background: rgba(255, 255, 255, 180); color: #8B75FA; }
+QListWidget#deckList::item:selected { background: #8B75FA; color: #ffffff; }
+
+/* 4. 右侧进度条 */
+QProgressBar#dailyProgress { height: 18px; border: 1px solid rgba(255, 255, 255, 150); border-radius: 9px; background: rgba(255, 255, 255, 120); text-align: center; color: #334155; font-size: 11px; font-weight: bold; }
+QProgressBar#dailyProgress::chunk { border-radius: 8px; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #9B88FA, stop:1 #8B75FA); }
+
+/* 5. 通用按钮 */
+QPushButton { outline: none; }
+
+/* 左侧按钮 */
+#btnAddDeck { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9B88FA, stop:1 #8B75FA); color: white; border-radius: 8px; border: 1px solid #7A61F9; border-top: 1px solid rgba(255, 255, 255, 0.45); border-bottom: 1px solid rgba(0, 0, 0, 0.15); font-weight: bold; }
+#btnAddDeck:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #AD9DFB, stop:1 #9D8AFB); }
+#btnAddDeck:pressed { background: #7A61F9; border-top: 1px solid transparent; padding-top: 2px; }
+
+#btnCalendar { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7D9FFB, stop:1 #638BFA); color: white; border-radius: 8px; border: 1px solid #4A76F9; border-top: 1px solid rgba(255, 255, 255, 0.45); border-bottom: 1px solid rgba(0, 0, 0, 0.15); font-weight: bold; }
+#btnCalendar:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #95B2FC, stop:1 #7D9FFB); }
+#btnCalendar:pressed { background: #4A76F9; border-top: 1px solid transparent; padding-top: 2px; }
+
+#btnDeleteDeck { background-color: rgba(255, 255, 255, 180); color: #EF4444; border-radius: 8px; border: 1px solid #FECACA; font-weight: bold; }
+#btnDeleteDeck:hover { background-color: #FEE2E2; }
+#btnDeleteDeck:pressed { padding-top: 2px; }
+
+#btnResetDeck { background-color: rgba(255, 255, 255, 180); color: #F59E0B; border-radius: 8px; border: 1px solid #FDE68A; font-weight: bold; }
+#btnResetDeck:hover { background-color: #FEF3C7; }
+#btnResetDeck:pressed { padding-top: 2px; }
+
+/* 显示答案大按钮 */
+#btnShowAnswer { background-color: rgba(255, 255, 255, 140); color: #8B75FA; border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #8B75FA; font-weight: bold; }
+#btnShowAnswer:hover { background-color: rgba(255, 255, 255, 220); }
+#btnShowAnswer:pressed { background-color: #8B75FA; color: white; border: none; padding-top: 2px; }
+
+/* 底部 4 个评分按钮 */
+#btnForget, #btnHard, #btnNormal, #btnEasy { background-color: rgba(255, 255, 255, 140); border-radius: 12px; font-weight: bold; }
+#btnForget:pressed, #btnHard:pressed, #btnNormal:pressed, #btnEasy:pressed { color: white; border: none; padding-top: 2px; }
+
+#btnForget { color: #F43F5E; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #F43F5E; }
+#btnForget:hover { background-color: rgba(255, 255, 255, 220); border-color: #F43F5E; }
+#btnForget:pressed { background-color: #F43F5E; }
+
+#btnHard { color: #F59E0B; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #F59E0B; }
+#btnHard:hover { background-color: rgba(255, 255, 255, 220); border-color: #F59E0B; }
+#btnHard:pressed { background-color: #F59E0B; }
+
+#btnNormal { color: #8B75FA; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #8B75FA; }
+#btnNormal:hover { background-color: rgba(255, 255, 255, 220); border-color: #8B75FA; }
+#btnNormal:pressed { background-color: #8B75FA; }
+
+#btnEasy { color: #10B981; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #10B981; }
+#btnEasy:hover { background-color: rgba(255, 255, 255, 220); border-color: #10B981; }
+#btnEasy:pressed { background-color: #10B981; }
