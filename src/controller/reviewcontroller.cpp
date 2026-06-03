@@ -82,6 +82,12 @@ void ReviewController::buildReviewQueue(bool forceReview) {
 }
 
 bool ReviewController::showAnswer() {
+    // 幂等保护：答案已揭示时来回翻牌只是视觉动画，重复请求直接静默返回，
+    // 既不重复发信号，也不应视为错误。
+    if (state == ReviewState::AnswerState) {
+        return false;
+    }
+
     Model::Card* card = currentCard();
     // 状态无效：只有提问态允许切换到答案态。
     if (state != ReviewState::QuestionState) {

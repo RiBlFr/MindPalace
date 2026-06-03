@@ -3,8 +3,10 @@ import QtQuick
 Item {
     id: root
 
-    // 监听 C++ 传进来的 themeMode（1 为极光，0 为经典）
-    property bool isAurora: typeof _reviewBridge !== "undefined" ? _reviewBridge.themeMode === 1 : true
+
+    // 主题切换重渲染时 _reviewBridge 会瞬时解析为 null，需显式判空避免读空指针报错。
+    property bool isAurora: (typeof _reviewBridge !== "undefined" && _reviewBridge !== null)
+                            ? _reviewBridge.themeMode === 1 : true
 
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."
