@@ -73,6 +73,15 @@ MainWindow::MainWindow(QWidget *parent)
         });
     }
 
+    // 绑定 F1-F4 评分热键：仅在答案态（评分按钮可见）时触发对应按钮
+    const Qt::Key feedbackKeys[4] = {Qt::Key_F1, Qt::Key_F2, Qt::Key_F3, Qt::Key_F4};
+    for (int i = 0; i < 4; ++i) {
+        auto *scoreKey = new QShortcut(feedbackKeys[i], this);
+        connect(scoreKey, &QShortcut::activated, this, [this, i]() {
+            if (feedbackRow->isVisible()) feedbackBtns[i]->click();
+        });
+    }
+
     // 绑定翻牌热键
     auto flipCard = [this]() {
         if (showAnswerBtn->isVisible()) {
@@ -185,7 +194,7 @@ void MainWindow::setupMenuBar() {
     auto *manageAction = fileMenu->addAction(tr("管理当前卡组的卡片"));
     connect(manageAction, &QAction::triggered, this, [this]() {
         if (auto *item = deckListWidget->currentItem()) emit signal_requestManageCards(item->text());
-        else QMessageBox::information(this, tr("提示"), tr("请先在左侧选择一个卡组"));
+        else StyledDialogs::info(this, tr("提示"), tr("请先在左侧选择一个卡组"));
     });
 
     auto *refreshAction = fileMenu->addAction(tr("刷新当前卡组"));
@@ -316,9 +325,11 @@ void MainWindow::initFlashCardView() {
     flashCardView->setFormat(format);
 
     flashCardView->setResizeMode(QQuickWidget::SizeRootObjectToView);
-    flashCardView->setClearColor(Qt::transparent);
-    flashCardView->setAttribute(Qt::WA_TranslucentBackground, true);
-    flashCardView->setAttribute(Qt::WA_OpaquePaintEvent, false);
+    // 卡片四周/下方的留白统一刷白：之前依赖 QQuickWidget 透明合成，
+    // 在部分 GPU 上会把未覆盖区域渲染成黑色。改用不透明白色底，彻底消除黑边。
+    flashCardView->setClearColor(Qt::white);
+    flashCardView->setAttribute(Qt::WA_TranslucentBackground, false);
+    flashCardView->setAttribute(Qt::WA_OpaquePaintEvent, true);
 
     flashCardView->setMinimumHeight(420);
 
@@ -479,27 +490,42 @@ void MainWindow::updateWeeklyChart(const std::vector<int>& data, const QStringLi
 void MainWindow::showPreferencesDialog() {
     QDialog dialog(this);
     dialog.setWindowTitle(tr("偏好设置"));
-    dialog.resize(320, 160);
+    dialog.setMinimumWidth(360);
+    StyledDialogs::applyStyle(&dialog);
 
     auto *layout = new QVBoxLayout(&dialog);
-    auto *group = new QGroupBox(tr("外观主题"), &dialog);
-    auto *groupLayout = new QVBoxLayout(group);
+    layout->setContentsMargins(24, 20, 24, 18);
+    layout->setSpacing(14);
 
-    auto *radioClassic = new QRadioButton(tr("经典扁平 (Classic)"), group);
-    auto *radioAurora = new QRadioButton(tr("极光拟态 (Aurora)"), group);
+    auto *promptLabel = new QLabel(tr("外观主题"), &dialog);
+    promptLabel->setObjectName("dialogPrompt");
+    layout->addWidget(promptLabel);
+
+    auto *radioClassic = new QRadioButton(tr("经典扁平 (Classic)"), &dialog);
+    auto *radioAurora = new QRadioButton(tr("极光拟态 (Aurora)"), &dialog);
 
     if (m_themeMode == ThemeMode::Classic) radioClassic->setChecked(true);
     else radioAurora->setChecked(true);
 
-    groupLayout->addWidget(radioClassic);
-    groupLayout->addWidget(radioAurora);
-    layout->addWidget(group);
+    layout->addWidget(radioClassic);
+    layout->addWidget(radioAurora);
 
-    auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    layout->addWidget(btnBox);
+    auto *footer = new QHBoxLayout;
+    footer->setSpacing(10);
+    footer->addStretch();
+    auto *cancelBtn = new QPushButton(tr("取消"), &dialog);
+    cancelBtn->setObjectName("dialogSecondary");
+    cancelBtn->setCursor(Qt::PointingHandCursor);
+    auto *okBtn = new QPushButton(tr("确定"), &dialog);
+    okBtn->setObjectName("dialogPrimary");
+    okBtn->setCursor(Qt::PointingHandCursor);
+    okBtn->setDefault(true);
+    footer->addWidget(cancelBtn);
+    footer->addWidget(okBtn);
+    layout->addLayout(footer);
 
-    connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(cancelBtn, &QPushButton::clicked, &dialog, &QDialog::reject);
+    connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
 
     if (dialog.exec() == QDialog::Accepted) {
         ThemeMode selectedMode = radioClassic->isChecked() ? ThemeMode::Classic : ThemeMode::Aurora;
@@ -534,7 +560,7 @@ void MainWindow::applyTheme(ThemeMode mode) {
     }
 
     if (flashCardView) {
-        flashCardView->setClearColor(Qt::transparent);
+        flashCardView->setClearColor(Qt::white);
     }
 
     emit themeModeChanged();

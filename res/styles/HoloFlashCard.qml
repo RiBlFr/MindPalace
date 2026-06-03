@@ -134,17 +134,23 @@ Item {
 
                     GradientStop {
                         position: 0.0
-                        color: Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
+                            : Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
                     }
 
                     GradientStop {
                         position: 0.5 + (root.shineX - 0.5) * 0.4
-                        color: Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
+                            : Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
                     }
 
                     GradientStop {
                         position: 1.0
-                        color: Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
+                            : Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
                     }
                 }
 

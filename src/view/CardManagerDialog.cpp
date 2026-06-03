@@ -167,7 +167,7 @@ void CardManagerDialog::handleAddClicked() {
     const QString front = m_addFront->text().trimmed();
     const QString back  = m_addBack->text().trimmed();
     if (front.isEmpty() || back.isEmpty()) {
-        QMessageBox::information(this, tr("提示"), tr("正面和背面都不能为空。"));
+        StyledDialogs::info(this, tr("提示"), tr("正面和背面都不能为空。"));
         return;
     }
 
@@ -185,13 +185,12 @@ void CardManagerDialog::handleAddClicked() {
 void CardManagerDialog::confirmAndRemoveRow(const QString& cardId,
                                             const QString& frontText,
                                             QWidget* rowMarker) {
-    const auto answer = QMessageBox::question(
+    const bool confirmed = StyledDialogs::confirm(
         this,
         tr("删除卡片"),
         tr("确定要删除这张卡片吗？\n\n正面：%1").arg(frontText),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No);
-    if (answer != QMessageBox::Yes) return;
+        /*dangerAction=*/true);
+    if (!confirmed) return;
 
     if (m_table) {
         for (int r = 0; r < m_table->rowCount(); ++r) {

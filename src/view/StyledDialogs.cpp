@@ -12,7 +12,16 @@
 
 namespace {
 
-void applyStyleSheet(QDialog* dialog) {
+QString trText(const char* sourceText) {
+    return QCoreApplication::translate("StyledDialogs", sourceText);
+}
+
+} // namespace
+
+void StyledDialogs::applyStyle(QDialog* dialog) {
+    if (!dialog) return;
+    dialog->setObjectName("simpleDialog");
+
     QFile qssFile(":/styles/SimpleDialog.qss");
     if (!qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "StyledDialogs: failed to load QSS:" << qssFile.errorString();
@@ -21,21 +30,14 @@ void applyStyleSheet(QDialog* dialog) {
     dialog->setStyleSheet(QString::fromUtf8(qssFile.readAll()));
 }
 
-QString trText(const char* sourceText) {
-    return QCoreApplication::translate("StyledDialogs", sourceText);
-}
-
-} // namespace
-
 std::optional<QString> StyledDialogs::getText(QWidget* parent,
                                               const QString& title,
                                               const QString& prompt,
                                               const QString& placeholder) {
     QDialog dialog(parent);
-    dialog.setObjectName("simpleDialog");
     dialog.setWindowTitle(title);
     dialog.setMinimumWidth(380);
-    applyStyleSheet(&dialog);
+    applyStyle(&dialog);
 
     auto *root = new QVBoxLayout(&dialog);
     root->setContentsMargins(24, 20, 24, 18);
@@ -83,10 +85,9 @@ std::optional<std::pair<QString, QString>> StyledDialogs::getCardPair(
     const QString& initFront,
     const QString& initBack) {
     QDialog dialog(parent);
-    dialog.setObjectName("simpleDialog");
     dialog.setWindowTitle(title);
     dialog.setMinimumWidth(420);
-    applyStyleSheet(&dialog);
+    applyStyle(&dialog);
 
     auto *root = new QVBoxLayout(&dialog);
     root->setContentsMargins(24, 20, 24, 18);
@@ -136,15 +137,46 @@ std::optional<std::pair<QString, QString>> StyledDialogs::getCardPair(
     return std::make_pair(f, b);
 }
 
+void StyledDialogs::info(QWidget* parent,
+                         const QString& title,
+                         const QString& message) {
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    dialog.setMinimumWidth(360);
+    applyStyle(&dialog);
+
+    auto *root = new QVBoxLayout(&dialog);
+    root->setContentsMargins(24, 20, 24, 18);
+    root->setSpacing(14);
+
+    auto *msgLabel = new QLabel(message, &dialog);
+    msgLabel->setObjectName("dialogMessage");
+    msgLabel->setWordWrap(true);
+    root->addWidget(msgLabel);
+
+    auto *footer = new QHBoxLayout;
+    footer->addStretch();
+    auto *okBtn = new QPushButton(trText("确定"), &dialog);
+    okBtn->setObjectName("dialogPrimary");
+    okBtn->setCursor(Qt::PointingHandCursor);
+    okBtn->setDefault(true);
+    footer->addWidget(okBtn);
+    root->addLayout(footer);
+
+    QObject::connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    okBtn->setFocus();
+    dialog.exec();
+}
+
 bool StyledDialogs::confirm(QWidget* parent,
                             const QString& title,
                             const QString& message,
                             bool dangerAction) {
     QDialog dialog(parent);
-    dialog.setObjectName("simpleDialog");
     dialog.setWindowTitle(title);
     dialog.setMinimumWidth(380);
-    applyStyleSheet(&dialog);
+    applyStyle(&dialog);
 
     auto *root = new QVBoxLayout(&dialog);
     root->setContentsMargins(24, 20, 24, 18);

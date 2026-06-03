@@ -5,6 +5,10 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QMetaObject>
+#include <QLabel>
+#include <QFile>
+
+#include "StyledDialogs.h"
 
 // =========================================================
 // CustomCalendarWidget 实现
@@ -18,33 +22,73 @@ void CustomCalendarWidget::setScheduleData(const QMap<QDate, QStringList>& data)
 }
 
 void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const QDate date) const {
-    // 1. 先让父类把原本灰白底色、日期数字画好
-    QCalendarWidget::paintCell(painter, rect, date);
+    // 完全自绘格子，换取圆角选中态、今日描边与排期药丸徽章的精细控制。
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
 
-    // 2. 拦截检查：这天有没有要复习的卡组？
-    if (m_scheduleData.contains(date)) {
-        const QStringList& decks = m_scheduleData[date];
-        if (decks.isEmpty()) return;
+    const bool isSelected     = (date == selectedDate());
+    const bool isToday        = (date == QDate::currentDate());
+    const bool inCurrentMonth = (date.month() == monthShown() && date.year() == yearShown());
+    const bool isWeekend      = (date.dayOfWeek() == Qt::Saturday || date.dayOfWeek() == Qt::Sunday);
+    const bool hasSchedule    = m_scheduleData.contains(date) && !m_scheduleData[date].isEmpty();
 
-        painter->save(); // 保护画笔状态
-        
-        // 设置一支蓝色的画笔用来写任务名称
-        painter->setPen(QColor("#4A90E2")); 
-        QFont font = painter->font();
-        font.setPointSize(8); // 字号小一点，避免超出格子
-        painter->setFont(font);
+    const QRect cellRect = rect.adjusted(3, 3, -3, -3);
 
-        // 如果只有1个卡组，直接写名字；如果多个，写 "C++等 3项"
-        QString text = decks.size() == 1 ? decks.first() : QString("%1等 %2项").arg(decks.first()).arg(decks.size());
-        
-        // 精确控制绘制位置：让文字显示在方格的底部区域
-        QRect textRect = rect;
-        textRect.setTop(rect.bottom() - 18); 
-        
-        painter->drawText(textRect, Qt::AlignCenter, text);
-        
-        painter->restore(); // 归还画笔状态
+    // 1. 背景：选中填充实色，今天描边
+    if (isSelected) {
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(QColor("#5688b8"));
+        painter->drawRoundedRect(cellRect, 8, 8);
+    } else if (isToday) {
+        painter->setPen(QPen(QColor("#5688b8"), 1.4));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawRoundedRect(cellRect, 8, 8);
     }
+
+    // 2. 日期数字
+    QColor dayColor;
+    if (isSelected)            dayColor = QColor("#ffffff");
+    else if (!inCurrentMonth)  dayColor = QColor("#cbd2d9");
+    else if (isWeekend)        dayColor = QColor("#cd7373");
+    else                       dayColor = QColor("#334155");
+
+    QFont dayFont = painter->font();
+    dayFont.setPointSize(10);
+    dayFont.setBold(isToday || isSelected);
+    painter->setFont(dayFont);
+    painter->setPen(dayColor);
+
+    QRect numberRect = rect;
+    numberRect.setBottom(rect.top() + static_cast<int>(rect.height() * 0.6));
+    painter->drawText(numberRect, Qt::AlignCenter, QString::number(date.day()));
+
+    // 3. 排期药丸徽章
+    if (hasSchedule) {
+        const QStringList& decks = m_scheduleData[date];
+        const QString text = decks.size() == 1
+            ? decks.first()
+            : QString("%1 等%2项").arg(decks.first()).arg(decks.size());
+
+        QFont badgeFont = painter->font();
+        badgeFont.setPointSize(7);
+        badgeFont.setBold(false);
+        painter->setFont(badgeFont);
+
+        const QRect badgeRect(rect.left() + 5, rect.bottom() - 19, rect.width() - 10, 16);
+        const QColor badgeBg   = isSelected ? QColor(255, 255, 255, 70) : QColor("#e8eef5");
+        const QColor badgeText = isSelected ? QColor("#ffffff")          : QColor("#487aaa");
+
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(badgeBg);
+        painter->drawRoundedRect(badgeRect, 8, 8);
+
+        painter->setPen(badgeText);
+        const QString elided = painter->fontMetrics().elidedText(
+            text, Qt::ElideRight, badgeRect.width() - 8);
+        painter->drawText(badgeRect, Qt::AlignCenter, elided);
+    }
+
+    painter->restore();
 }
 
 // =========================================================
@@ -55,18 +99,46 @@ ScheduleCalendarDialog::ScheduleCalendarDialog(const QStringList& availableDecks
     : QDialog(parent), m_availableDecks(availableDecks) 
 {
     setWindowTitle(tr("复习计划看板"));
-    resize(800, 600);
+    setObjectName("scheduleCalendar");
+    resize(820, 660);
+
+    // 加载美化样式表
+    QFile qssFile(":/styles/Calendar.qss");
+    if (qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        setStyleSheet(QString::fromUtf8(qssFile.readAll()));
+    }
 
     auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(24, 20, 24, 22);
+    layout->setSpacing(12);
+
+    auto *title = new QLabel(tr("复习计划看板"), this);
+    title->setObjectName("calendarTitle");
+    layout->addWidget(title);
+
+    auto *hint = new QLabel(
+        tr("右键点击任意日期，可安排强制复习 / 强制休假，或清除自定义计划恢复算法默认。"), this);
+    hint->setObjectName("calendarHint");
+    hint->setWordWrap(true);
+    layout->addWidget(hint);
+
+    layout->addSpacing(4);
+
     m_calendar = new CustomCalendarWidget(this);
-    
+    m_calendar->setObjectName("calendarView");
+    m_calendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+    m_calendar->setHorizontalHeaderFormat(QCalendarWidget::ShortDayNames);
+    m_calendar->setFirstDayOfWeek(Qt::Monday);
+    m_calendar->setGridVisible(false);
+    m_calendar->setNavigationBarVisible(true);
+
     // 开启自定义右键菜单支持
     m_calendar->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(m_calendar, &QWidget::customContextMenuRequested, 
+    connect(m_calendar, &QWidget::customContextMenuRequested,
             this, &ScheduleCalendarDialog::onCustomContextMenuRequested);
 
     // 当用户翻页（看上个月/下个月）时，主动拉取新数据
-    connect(m_calendar, &QCalendarWidget::currentPageChanged, 
+    connect(m_calendar, &QCalendarWidget::currentPageChanged,
             this, [this](int, int){ refreshCalendarData(); });
 
     layout->addWidget(m_calendar);
@@ -84,7 +156,7 @@ void ScheduleCalendarDialog::refreshCalendarData() {
 
 void ScheduleCalendarDialog::onCustomContextMenuRequested(const QPoint &pos) {
     if (m_availableDecks.isEmpty()) {
-        QMessageBox::warning(this, tr("提示"), tr("当前没有任何卡组，无法安排计划。"));
+        StyledDialogs::info(this, tr("提示"), tr("当前没有任何卡组，无法安排计划。"));
         return;
     }
 
@@ -106,11 +178,16 @@ void ScheduleCalendarDialog::onCustomContextMenuRequested(const QPoint &pos) {
     else if (result == restAct) status = -1;
     else if (result == clearAct) status = 0;
 
-    // 弹出二次确认，问用户要对哪个卡组下手
-    bool ok;
-    QString targetDeck = QInputDialog::getItem(this, tr("选择目标卡组"), 
-                                               tr("请选择要在 %1 调整进度的卡组：").arg(selectedDate.toString("MM-dd")), 
-                                               m_availableDecks, 0, false, &ok);
+    // 弹出二次确认，问用户要对哪个卡组下手（套用 SimpleDialog 统一风格）
+    QInputDialog inputDlg(this);
+    StyledDialogs::applyStyle(&inputDlg);
+    inputDlg.setWindowTitle(tr("选择目标卡组"));
+    inputDlg.setLabelText(tr("请选择要在 %1 调整进度的卡组：").arg(selectedDate.toString("MM-dd")));
+    inputDlg.setComboBoxItems(m_availableDecks);
+    inputDlg.setComboBoxEditable(false);
+
+    const bool ok = (inputDlg.exec() == QDialog::Accepted);
+    const QString targetDeck = inputDlg.textValue();
     if (ok && !targetDeck.isEmpty()) {
         // 抛出修改信号
         emit signal_requestUpdateSchedule(targetDeck, selectedDate, status);

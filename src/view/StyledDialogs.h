@@ -6,6 +6,7 @@
 #include <utility>
 
 class QWidget;
+class QDialog;
 
 /**
  * @brief 项目内统一风格的小型对话框 helper。
@@ -14,6 +15,20 @@ class QWidget;
  * 各自呈现系统原生外观。
  */
 namespace StyledDialogs {
+
+/**
+ * @brief 给任意弹出窗口套用 SimpleDialog.qss 风格。
+ *        会把 objectName 设为 "simpleDialog" 并加载样式表，
+ *        供自建的小窗口（如偏好设置、QInputDialog 等）复用。
+ */
+void applyStyle(QDialog* dialog);
+
+/**
+ * @brief 弹出一个仅含「确定」按钮的提示框，替代系统原生 QMessageBox::information。
+ */
+void info(QWidget* parent,
+          const QString& title,
+          const QString& message);
 
 /**
  * @brief 弹出一个文本输入对话框。返回 std::nullopt 表示用户取消，

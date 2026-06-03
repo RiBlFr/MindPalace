@@ -30,44 +30,59 @@ QProgressBar#dailyProgress::chunk { border-radius: 8px; background: qlineargradi
 /* 5. 通用按钮 */
 QPushButton { outline: none; }
 
-/* 左侧按钮 */
-#btnAddDeck { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9B88FA, stop:1 #8B75FA); color: white; border-radius: 8px; border: 1px solid #7A61F9; border-top: 1px solid rgba(255, 255, 255, 0.45); border-bottom: 1px solid rgba(0, 0, 0, 0.15); font-weight: bold; }
-#btnAddDeck:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #AD9DFB, stop:1 #9D8AFB); }
-#btnAddDeck:pressed { background: #7A61F9; border-top: 1px solid transparent; padding-top: 2px; }
+/* 所有操作按钮统一为「四个难度按钮」的玻璃拟态风格：
+   半透明白底 + 白色细边 + 强调色底边；hover 提亮，pressed 填充强调色。 */
+#btnAddDeck, #btnCalendar, #btnDeleteDeck, #btnResetDeck, #btnShowAnswer,
+#btnForget, #btnHard, #btnNormal, #btnEasy {
+    background-color: rgba(255, 255, 255, 140);
+    border: 1.5px solid rgba(255, 255, 255, 220);
+    border-radius: 12px;
+    font-weight: bold;
+}
+#btnAddDeck:hover, #btnCalendar:hover, #btnDeleteDeck:hover, #btnResetDeck:hover, #btnShowAnswer:hover,
+#btnForget:hover, #btnHard:hover, #btnNormal:hover, #btnEasy:hover {
+    background-color: rgba(255, 255, 255, 220);
+}
+#btnAddDeck:pressed, #btnCalendar:pressed, #btnDeleteDeck:pressed, #btnResetDeck:pressed, #btnShowAnswer:pressed,
+#btnForget:pressed, #btnHard:pressed, #btnNormal:pressed, #btnEasy:pressed {
+    color: white;
+    border: none;
+    padding-top: 2px;
+}
 
-#btnCalendar { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #7D9FFB, stop:1 #638BFA); color: white; border-radius: 8px; border: 1px solid #4A76F9; border-top: 1px solid rgba(255, 255, 255, 0.45); border-bottom: 1px solid rgba(0, 0, 0, 0.15); font-weight: bold; }
-#btnCalendar:hover { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #95B2FC, stop:1 #7D9FFB); }
-#btnCalendar:pressed { background: #4A76F9; border-top: 1px solid transparent; padding-top: 2px; }
+/* 各按钮的强调色（文字 + 底边 + hover 描边 + pressed 填充） */
+#btnAddDeck { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
+#btnAddDeck:hover { border-color: #8B75FA; }
+#btnAddDeck:pressed { background-color: #8B75FA; }
 
-#btnDeleteDeck { background-color: rgba(255, 255, 255, 180); color: #EF4444; border-radius: 8px; border: 1px solid #FECACA; font-weight: bold; }
-#btnDeleteDeck:hover { background-color: #FEE2E2; }
-#btnDeleteDeck:pressed { padding-top: 2px; }
+#btnCalendar { color: #638BFA; border-bottom: 2px solid #638BFA; }
+#btnCalendar:hover { border-color: #638BFA; }
+#btnCalendar:pressed { background-color: #638BFA; }
 
-#btnResetDeck { background-color: rgba(255, 255, 255, 180); color: #F59E0B; border-radius: 8px; border: 1px solid #FDE68A; font-weight: bold; }
-#btnResetDeck:hover { background-color: #FEF3C7; }
-#btnResetDeck:pressed { padding-top: 2px; }
+#btnDeleteDeck { color: #F43F5E; border-bottom: 2px solid #F43F5E; }
+#btnDeleteDeck:hover { border-color: #F43F5E; }
+#btnDeleteDeck:pressed { background-color: #F43F5E; }
 
-/* 显示答案大按钮 */
-#btnShowAnswer { background-color: rgba(255, 255, 255, 140); color: #8B75FA; border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #8B75FA; font-weight: bold; }
-#btnShowAnswer:hover { background-color: rgba(255, 255, 255, 220); }
-#btnShowAnswer:pressed { background-color: #8B75FA; color: white; border: none; padding-top: 2px; }
+#btnResetDeck { color: #F59E0B; border-bottom: 2px solid #F59E0B; }
+#btnResetDeck:hover { border-color: #F59E0B; }
+#btnResetDeck:pressed { background-color: #F59E0B; }
 
-/* 底部 4 个评分按钮 */
-#btnForget, #btnHard, #btnNormal, #btnEasy { background-color: rgba(255, 255, 255, 140); border-radius: 12px; font-weight: bold; }
-#btnForget:pressed, #btnHard:pressed, #btnNormal:pressed, #btnEasy:pressed { color: white; border: none; padding-top: 2px; }
+#btnShowAnswer { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
+#btnShowAnswer:hover { border-color: #8B75FA; }
+#btnShowAnswer:pressed { background-color: #8B75FA; }
 
-#btnForget { color: #F43F5E; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #F43F5E; }
-#btnForget:hover { background-color: rgba(255, 255, 255, 220); border-color: #F43F5E; }
+#btnForget { color: #F43F5E; border-bottom: 2px solid #F43F5E; }
+#btnForget:hover { border-color: #F43F5E; }
 #btnForget:pressed { background-color: #F43F5E; }
 
-#btnHard { color: #F59E0B; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #F59E0B; }
-#btnHard:hover { background-color: rgba(255, 255, 255, 220); border-color: #F59E0B; }
+#btnHard { color: #F59E0B; border-bottom: 2px solid #F59E0B; }
+#btnHard:hover { border-color: #F59E0B; }
 #btnHard:pressed { background-color: #F59E0B; }
 
-#btnNormal { color: #8B75FA; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #8B75FA; }
-#btnNormal:hover { background-color: rgba(255, 255, 255, 220); border-color: #8B75FA; }
+#btnNormal { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
+#btnNormal:hover { border-color: #8B75FA; }
 #btnNormal:pressed { background-color: #8B75FA; }
 
-#btnEasy { color: #10B981; border: 1.5px solid rgba(255, 255, 255, 220); border-bottom: 2px solid #10B981; }
-#btnEasy:hover { background-color: rgba(255, 255, 255, 220); border-color: #10B981; }
+#btnEasy { color: #10B981; border-bottom: 2px solid #10B981; }
+#btnEasy:hover { border-color: #10B981; }
 #btnEasy:pressed { background-color: #10B981; }
