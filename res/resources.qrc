@@ -7,6 +7,7 @@
 
         <file>styles/CardManagerDialog.qss</file>
         <file>styles/SimpleDialog.qss</file>
+        <file>styles/Calendar.qss</file>
 
         <file>styles/HoloFlashCard.qml</file>
         <file>styles/FlashCardStack.qml</file>

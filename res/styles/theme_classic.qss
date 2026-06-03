@@ -9,101 +9,117 @@ QWidget[panel="side"] { background-color: #f3f6fa; }
 /* 2. 顶部菜单栏 */
 QMenuBar { background: #ffffff; border-bottom: 1px solid #e5e7eb; }
 QMenuBar::item { padding: 6px 10px; border-radius: 6px; color: #1f2937; background: transparent; }
-QMenuBar::item:selected { background: #eef2ff; color: #2563eb; }
+QMenuBar::item:selected { background: #e4ebf2; color: #4a7297; }
 QMenu { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; }
 QMenu::item { padding: 7px 28px 7px 18px; border-radius: 6px; color: #1f2937; }
-QMenu::item:selected { background: #eff6ff; color: #2563eb; }
+QMenu::item:selected { background: #e4ebf2; color: #4a7297; }
 
 /* 3. 左侧卡组列表 */
 QListWidget#deckList { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 6px; outline: none; }
 QListWidget#deckList::item { padding: 10px 12px; margin: 2px; border-radius: 8px; color: #334155; }
-QListWidget#deckList::item:hover { background: #eff6ff; color: #1d4ed8; }
-QListWidget#deckList::item:selected { background: #2563eb; color: #ffffff; }
+QListWidget#deckList::item:hover { background: #e4ebf2; color: #4a7297; }
+QListWidget#deckList::item:selected { background: #5688b8; color: #ffffff; }
 
 /* 4. 右侧数据卡片 (无阴影) */
 QFrame[role="surface"] { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; }
 
 /* 5. 进度条 */
 QProgressBar#dailyProgress { height: 18px; border: none; border-radius: 9px; background: #e5e7eb; text-align: center; color: #334155; font-size: 11px; font-weight: bold; }
-QProgressBar#dailyProgress::chunk { border-radius: 9px; background: #2563eb; }
+QProgressBar#dailyProgress::chunk { border-radius: 9px; background: #5688b8; }
 
+/* 莫兰迪配色（中等饱和）：暖灰打底，强调色降彩度但仍清晰可辨 */
 QPushButton {
     border: 1px solid transparent;
     border-radius: 8px;
-    background-color: #e5e7eb;
-    color: #1f2937;
+    background-color: #dad8d1;
+    color: #4b4b47;
     font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #cfccc4;
 }
 QPushButton:pressed {
     padding-top: 2px;
 }
 
-QPushButton#btnAddDeck, QPushButton#btnCalendar {
-    background-color: #2563eb;
+/* 主操作：雾蓝 / 雾青 */
+QPushButton#btnAddDeck {
+    background-color: #5688b8;
     color: #ffffff;
 }
-QPushButton#btnAddDeck:hover, QPushButton#btnCalendar:hover {
-    background-color: #1d4ed8;
+QPushButton#btnAddDeck:hover {
+    background-color: #487aaa;
 }
 
+QPushButton#btnCalendar {
+    background-color: #4f9e8f;
+    color: #ffffff;
+}
+QPushButton#btnCalendar:hover {
+    background-color: #44897c;
+}
+
+/* 删除：豆沙红 */
 QPushButton#btnDeleteDeck {
-    background-color: #ef4444;
+    background-color: #cd7373;
     color: #ffffff;
 }
 QPushButton#btnDeleteDeck:hover {
-    background-color: #dc2626;
+    background-color: #bb6060;
 }
 
+/* 重置：陶土橙 */
 QPushButton#btnResetDeck {
-    background-color: #f97316;
+    background-color: #d59746;
     color: #ffffff;
 }
 QPushButton#btnResetDeck:hover {
-    background-color: #ea580c;
+    background-color: #c2853a;
 }
 
 QPushButton#btnShowAnswer {
-    background-color: #2563eb;
+    background-color: #5688b8;
     color: #ffffff;
     border-radius: 12px;
     font-size: 14px;
 }
 QPushButton#btnShowAnswer:hover {
-    background-color: #1d4ed8;
+    background-color: #487aaa;
 }
 
+/* 四个难度按钮：莫兰迪豆沙红 / 陶土橙 / 赭黄 / 灰绿 */
 QPushButton#btnForget {
-    background-color: #ef4444;
+    background-color: #cd7373;
     color: #ffffff;
     border-radius: 12px;
 }
 QPushButton#btnForget:hover {
-    background-color: #dc2626;
+    background-color: #bb6060;
 }
 
 QPushButton#btnHard {
-    background-color: #f97316;
+    background-color: #d59746;
     color: #ffffff;
     border-radius: 12px;
 }
 QPushButton#btnHard:hover {
-    background-color: #ea580c;
+    background-color: #c2853a;
 }
 
 QPushButton#btnNormal {
-    background-color: #eab308;
+    background-color: #cdb24c;
     color: #ffffff;
     border-radius: 12px;
 }
 QPushButton#btnNormal:hover {
-    background-color: #ca8a04;
+    background-color: #ba9f3c;
 }
 
 QPushButton#btnEasy {
-    background-color: #22c55e;
+    background-color: #82b56c;
     color: #ffffff;
     border-radius: 12px;
 }
 QPushButton#btnEasy:hover {
-    background-color: #16a34a;
+    background-color: #6fa259;
 }

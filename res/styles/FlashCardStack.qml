@@ -93,7 +93,7 @@ Item {
             cardFlippedToBack()
             // Direct call into C++ via context property — this is the reliable path.
             // SIGNAL() macro connections to QML-generated signals are fragile in Qt6 QQuickWidget.
-            if (typeof _reviewBridge !== "undefined") {
+            if (typeof _reviewBridge !== "undefined" && _reviewBridge !== null) {
                 _reviewBridge.notifyCardFlipped(true)
             }
         }
