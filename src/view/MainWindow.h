@@ -19,6 +19,9 @@ class QProgressBar;
 class QFrame;
 class QQuickWidget;
 class QStackedWidget;
+class QGraphicsDropShadowEffect;
+class QPropertyAnimation;
+class QResizeEvent;
 /**
  * @class MainWindow
  * @brief 记忆殿堂主窗口
@@ -110,6 +113,12 @@ public:
      */
     void updateWeeklyChart(const std::vector<int>& data, const QStringList& labels);
 
+    /**
+     * @brief 根据“连续选择简单”的连胜张数刷新中央的“火热连胜”徽章。
+     * @param easyStreak 当前连胜张数；小于 2 时隐藏徽章，达到阈值后按档位施加不同特效。
+     */
+    void updateStreakBadge(int easyStreak);
+
 private:
     // UI 初始化
     void initUI();
@@ -121,6 +130,11 @@ private:
 
     void initFlashCardView();
     QWidget* setupFeedbackButtons();
+
+    // 创建并初始化中央悬浮的“火热连胜”徽章（叠在闪卡看板之上）
+    void setupStreakBadge();
+    // 把徽章重新摆到中央看板顶部居中（窗口尺寸或内容变化时调用）
+    void repositionStreakBadge();
 
 signals:
     void themeModeChanged();
@@ -167,6 +181,9 @@ protected:
     // 重写关闭事件，用于拦截右上角的红叉
     void closeEvent(QCloseEvent *event) override;
 
+    // 窗口尺寸变化时，让悬浮的“火热连胜”徽章保持在中央看板顶部居中
+    void resizeEvent(QResizeEvent *event) override;
+
 private:
     int m_themeIndex = 0; // 当前主题在 Theme::availableThemes() 中的索引（构造时由配置/默认值覆盖）
 
@@ -187,6 +204,11 @@ private:
     QPushButton *showAnswerBtn{};    // 问题态：大的"显示答案"按钮
     QWidget    *feedbackRow{};       // 答案态：4 个评分按钮的容器
     QPushButton *feedbackBtns[4]{};  // 生疏、困难、良好、简单（在 feedbackRow 内）
+
+    // ===== “火热连胜”悬浮徽章（叠加在中央闪卡看板之上）=====
+    QLabel *streakBadge{};                       // 显示连胜文案与分档名称
+    QGraphicsDropShadowEffect *streakGlow{};     // 徽章光晕，按档位换色
+    QPropertyAnimation *streakPulse{};           // 连胜增长时的光晕脉冲动画
 
     // ===== 右侧统计面板 =====
     QWidget *rightPanel{};
