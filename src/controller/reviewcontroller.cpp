@@ -1,7 +1,10 @@
 #include "reviewcontroller.h"
 #include "service/sm2engine.h"
 #include "service/storagemanager.h"
-
+#include <QSettings>
+#include <random>
+#include <algorithm>
+#include <vector>
 #include <QDebug>
 
 namespace MindPalace::Controller {
@@ -71,17 +74,39 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
     return true;
 }
 
-void ReviewController::buildReviewQueue(bool forceReview) {
+    void ReviewController::buildReviewQueue(bool forceReview) {
     clearQueue();
 
     if (!activeDeck) {
         return;
     }
 
+    // 1. 缓冲池：使用 vector 收集所有符合条件的卡片指针
+    std::vector<Model::Card*> tempCards;
+
     for (const auto& card : activeDeck->cards) {
         if (card && (forceReview || card->isDue())) {
-            reviewQueue.push(card.get());
+            tempCards.push_back(card.get());
         }
+    }
+
+    // 2. 读取用户的全局偏好设置 (默认 false，即顺序复习)
+    QSettings settings("MindPalace", "Settings");
+    bool isRandomShuffle = settings.value("shuffleReview", false).toBool();
+
+    // 3. 核心洗牌算法：如果开启了随机，则在 vector 内进行高效原地乱序
+    if (isRandomShuffle) {
+        // 使用硬件级随机数种子初始化梅森旋转算法 (Mersenne Twister)
+        std::random_device rd;
+        std::mt19937 generator(rd());
+
+        // 调用标准库算法，时间复杂度 O(N)
+        std::shuffle(tempCards.begin(), tempCards.end(), generator);
+    }
+
+    // 4. 将处理好的卡片依次推入真正的复习队列
+    for (Model::Card* c : tempCards) {
+        reviewQueue.push(c);
     }
 }
 
