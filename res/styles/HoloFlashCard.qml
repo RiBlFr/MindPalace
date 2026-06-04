@@ -5,8 +5,9 @@ Item {
 
 
     // 主题切换重渲染时 _reviewBridge 会瞬时解析为 null，需显式判空避免读空指针报错。
+    // frostedCard 由 C++ 主题注册表驱动，QML 不再关心具体主题索引。
     property bool isAurora: (typeof _reviewBridge !== "undefined" && _reviewBridge !== null)
-                            ? _reviewBridge.themeMode === 1 : true
+                            ? _reviewBridge.frostedCard : true
 
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."

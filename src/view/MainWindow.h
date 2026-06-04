@@ -26,20 +26,23 @@ class QStackedWidget;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
+    // themeMode 暴露当前主题在注册表（Theme::availableThemes()）中的索引；
+    // frostedCard 让 QML 无需关心具体主题，只问“当前是否磨砂玻璃卡片”。
     Q_PROPERTY(int themeMode READ themeMode NOTIFY themeModeChanged)
+    Q_PROPERTY(bool frostedCard READ frostedCard NOTIFY themeModeChanged)
 
 public:
-    // 定义主题枚举：0为经典蓝，1为极光玻璃
-    enum class ThemeMode { Classic = 0, Aurora = 1 };
-
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
-    // 获取当前主题的 Getter
-    int themeMode() const { return static_cast<int>(m_themeMode); }
+    // 当前主题在 Theme::availableThemes() 中的索引
+    int themeMode() const { return m_themeIndex; }
 
-    // 应用新主题的执行函数
-    void applyTheme(ThemeMode mode);
+    // 当前主题是否使用磨砂玻璃卡片效果（供 QML 绑定）
+    bool frostedCard() const;
+
+    // 应用主题：themeIndex 为 Theme::availableThemes() 中的索引
+    void applyTheme(int themeIndex);
 
     // ==========================================
     // 对外暴露的被动渲染接口 (供 AppController 调用).
@@ -165,7 +168,7 @@ protected:
     void closeEvent(QCloseEvent *event) override;
 
 private:
-    ThemeMode m_themeMode = ThemeMode::Aurora; // 默认极光模式
+    int m_themeIndex = 0; // 当前主题在 Theme::availableThemes() 中的索引（构造时由配置/默认值覆盖）
 
     // ===== 左侧导航面板 =====
     QWidget *leftPanel{};

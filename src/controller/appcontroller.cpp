@@ -418,8 +418,9 @@ void AppController::handleUpdateDeckSchedule(const QString& deckName, const QDat
         targetDeck->manualSchedule[dateStr] = status; // 写入 1 (复习) 或 -1 (休假)
     }
 
-    // ⚠️ 极其关键：修改完内存后，必须立刻落盘保存，防止数据丢失！
-    // 因为这里需要调用持久化，我们需要确认你的底层是如何存整个牌组的。
-    // (见下方说明，稍后我们一起把这一行补全)
+    QString targetFilePath = QDir(m_decksDirPath).filePath(targetDeck->deckId + ".json");
+    if (!Service::StorageManager::saveDeck(*targetDeck, targetFilePath)) {
+        qCritical() << "AppController 调度落盘失败: 无法持久化牌组日历计划 ->" << targetFilePath;
+    }
 }
 } // namespace MindPalace::Controller
