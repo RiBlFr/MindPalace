@@ -165,10 +165,10 @@ void ScheduleCalendarDialog::onCustomContextMenuRequested(const QPoint &pos) {
 
     // 弹出优美的右键操作菜单
     QMenu menu(this);
-    QAction *sprintAct = menu.addAction(tr("💪 安排强制复习 (冲刺)"));
-    QAction *restAct   = menu.addAction(tr("🏖️ 安排强制休假 (休息)"));
+    QAction *sprintAct = menu.addAction(tr("安排强制复习"));
+    QAction *restAct   = menu.addAction(tr("安排休假"));
     menu.addSeparator();
-    QAction *clearAct  = menu.addAction(tr("🔄 清除该日自定义计划 (恢复算法)"));
+    QAction *clearAct  = menu.addAction(tr("🔄 清除该日自定义计划"));
 
     QAction *result = menu.exec(m_calendar->mapToGlobal(pos));
     if (!result) return; // 用户点空白处取消了
