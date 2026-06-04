@@ -109,12 +109,23 @@ signals:
      */
     void signal_reviewFinished();
 
+    /**
+     * @brief 当“连续选择简单”的连胜计数发生变化时触发。
+     * @param easyStreak 当前在本牌组会话中连续评定为 [熟悉] 的张数；
+     * 任意一次非简单评分都会立刻清零。新会话开始时也会归零（携带 0 广播）。
+     * 外部协调者可据此驱动 View 显示/隐藏“火热连胜”徽章并分档施加特效。
+     */
+    void signal_streakChanged(int easyStreak);
+
 private:
     Model::Deck* activeDeck = nullptr;
     QString activeDeckFilePath;
     std::queue<Model::Card*> reviewQueue;
     int totalReviewCount = 0;
     ReviewState state = ReviewState::FinishedState;
+
+    // 本牌组会话内“连续选择简单”的累计张数；非简单评分立即清零，换牌组时归零。
+    int easyStreak = 0;
 
     /**
      * @brief 构建复习队列
