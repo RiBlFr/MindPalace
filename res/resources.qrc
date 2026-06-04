@@ -11,5 +11,8 @@
 
         <file>styles/HoloFlashCard.qml</file>
         <file>styles/FlashCardStack.qml</file>
+
+        <file alias="docs/HowToUse.md">../docs/HowToUse.md</file>
+        <file alias="docs/AboutUs.md">../docs/AboutUs.md</file>
     </qresource>
 </RCC>
