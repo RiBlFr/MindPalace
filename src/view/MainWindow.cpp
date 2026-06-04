@@ -28,11 +28,13 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QCloseEvent>
 #include <QQmlContext>
 #include <QQmlEngine>
 
 #include "StyleUtils.h"
+#include "ThemeRegistry.h"
 #include "CardManagerDialog.h"
 #include "StyledDialogs.h"
 #include "ScheduleCalendarDialog.h"
@@ -51,9 +53,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     // ==========================================
     // 1. 启动时读取用户的历史主题选择
+    //    优先按稳定的 themeKey 还原；兼容旧版本仅存了 themeMode 整型索引的情况。
     // ==========================================
     QSettings settings("MindPalace", "Settings");
-    m_themeMode = static_cast<ThemeMode>(settings.value("themeMode", static_cast<int>(ThemeMode::Aurora)).toInt());
+    if (settings.contains("themeKey")) {
+        m_themeIndex = Theme::indexForKey(settings.value("themeKey").toString());
+    } else {
+        // 旧版本回退：themeMode 曾是 0=经典 / 1=极光，与注册表索引一致
+        const int legacy = settings.value("themeMode", Theme::indexForKey("aurora")).toInt();
+        m_themeIndex = (legacy >= 0 && legacy < Theme::themeCount()) ? legacy : 0;
+    }
 
     initUI();
 
@@ -105,7 +114,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 2. 统一渲染入口：打上根节点 ID，并首次应用主题
     // ==========================================
     this->setObjectName("mainWindowRoot");
-    applyTheme(m_themeMode);
+    applyTheme(m_themeIndex);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -114,9 +123,36 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::updateDeckListView(const std::vector<QString>& deckNames) const{
-    deckListWidget->clear();
-    for (const auto& name : deckNames) {
-        deckListWidget->addItem(name);
+    // 记录重建前选中的卡组。增删卡片 / 牌组都会触发列表重建，若不还原选区，
+    // currentTextChanged 不会再次发出，右侧“总体统计/掌握率”就会丢失上下文而显示陈旧值。
+    const QString previous =
+        deckListWidget->currentItem() ? deckListWidget->currentItem()->text() : QString();
+
+    {
+        // 重建过程中屏蔽信号，避免 clear()/addItem() 触发的中间态反复重启复习会话与统计刷新
+        const QSignalBlocker blocker(deckListWidget);
+        deckListWidget->clear();
+        for (const auto& name : deckNames) {
+            deckListWidget->addItem(name);
+        }
+        deckListWidget->setCurrentRow(-1);
+    }
+
+    // 选区策略：优先还原之前选中的卡组；若它已被删除则回退到第一个，
+    // 保证主界面始终有一个选中的卡组，掌握率等统计随之实时刷新。
+    int rowToSelect = -1;
+    if (!previous.isEmpty()) {
+        const auto matches = deckListWidget->findItems(previous, Qt::MatchExactly);
+        if (!matches.isEmpty()) {
+            rowToSelect = deckListWidget->row(matches.first());
+        }
+    }
+    if (rowToSelect < 0 && deckListWidget->count() > 0) {
+        rowToSelect = 0;
+    }
+    if (rowToSelect >= 0) {
+        // 解除屏蔽后单次设置选区，触发一次 currentTextChanged → 刷新掌握率等统计
+        deckListWidget->setCurrentRow(rowToSelect);
     }
 }
 
@@ -468,8 +504,8 @@ void MainWindow::showCardManagerDialog(const QString& deckName, const std::vecto
 }
 
 void MainWindow::setupStyles() {
-    // 动态根据枚举加载对应的 QSS，再也不会迷路了！
-    QString qssPath = (m_themeMode == ThemeMode::Classic) ? ":/styles/theme_classic.qss" : ":/styles/theme_aurora.qss";
+    // 从主题注册表取当前主题的 QSS 路径，新增主题无需改动此处
+    const QString qssPath = Theme::themeAt(m_themeIndex).qssPath;
     QFile qssFile(qssPath);
     if (!qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "Failed to load QSS resource" << qssFile.fileName();
@@ -501,14 +537,16 @@ void MainWindow::showPreferencesDialog() {
     promptLabel->setObjectName("dialogPrompt");
     layout->addWidget(promptLabel);
 
-    auto *radioClassic = new QRadioButton(tr("经典扁平 (Classic)"), &dialog);
-    auto *radioAurora = new QRadioButton(tr("极光拟态 (Aurora)"), &dialog);
-
-    if (m_themeMode == ThemeMode::Classic) radioClassic->setChecked(true);
-    else radioAurora->setChecked(true);
-
-    layout->addWidget(radioClassic);
-    layout->addWidget(radioAurora);
+    // 按注册表动态生成单选项：新增主题后这里会自动出现，无需修改
+    std::vector<QRadioButton*> themeRadios;
+    const auto& themes = Theme::availableThemes();
+    themeRadios.reserve(themes.size());
+    for (int i = 0; i < static_cast<int>(themes.size()); ++i) {
+        auto *radio = new QRadioButton(themes[i].displayName, &dialog);
+        radio->setChecked(i == m_themeIndex);
+        layout->addWidget(radio);
+        themeRadios.push_back(radio);
+    }
 
     auto *footer = new QHBoxLayout;
     footer->setSpacing(10);
@@ -528,27 +566,40 @@ void MainWindow::showPreferencesDialog() {
     connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
 
     if (dialog.exec() == QDialog::Accepted) {
-        ThemeMode selectedMode = radioClassic->isChecked() ? ThemeMode::Classic : ThemeMode::Aurora;
-        if (selectedMode != m_themeMode) {
-            applyTheme(selectedMode);
+        int selectedIndex = m_themeIndex;
+        for (int i = 0; i < static_cast<int>(themeRadios.size()); ++i) {
+            if (themeRadios[i]->isChecked()) {
+                selectedIndex = i;
+                break;
+            }
+        }
+        if (selectedIndex != m_themeIndex) {
+            applyTheme(selectedIndex);
         }
     }
 }
 
-void MainWindow::applyTheme(ThemeMode mode) {
-    m_themeMode = mode;
+void MainWindow::applyTheme(int themeIndex) {
+    // 防御性夹取，并落到注册表里真实存在的主题
+    if (themeIndex < 0 || themeIndex >= Theme::themeCount()) {
+        themeIndex = 0;
+    }
+    m_themeIndex = themeIndex;
+
+    const Theme::ThemeDef& theme = Theme::themeAt(m_themeIndex);
 
     QSettings settings("MindPalace", "Settings");
-    settings.setValue("themeMode", static_cast<int>(m_themeMode));
+    settings.setValue("themeKey", theme.key);          // 主存：稳定 key
+    settings.setValue("themeMode", m_themeIndex);      // 兼容旧字段，便于回退读取
 
     // 1. 加载对应的 QSS
     setupStyles();
 
-    // 2. 动态清理或附加边框阴影效果
-    bool isAurora = (mode == ThemeMode::Aurora);
+    // 2. 按主题特性决定卡片表面是磨砂玻璃 + 柔和阴影，还是扁平交还给 QSS
+    const bool frosted = theme.frostedSurface;
     for (auto *frame : this->findChildren<QFrame*>()) {
         if (frame->property("role") == "surface") {
-            if (isAurora) {
+            if (frosted) {
                 frame->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4); border: 1px solid rgba(255, 255, 255, 220); border-radius: 16px;")
                                      .arg(Theme::Surface.red()).arg(Theme::Surface.green()).arg(Theme::Surface.blue()).arg(Theme::Surface.alpha()));
                 addSoftShadow(frame);
@@ -564,4 +615,8 @@ void MainWindow::applyTheme(ThemeMode mode) {
     }
 
     emit themeModeChanged();
+}
+
+bool MainWindow::frostedCard() const {
+    return Theme::themeAt(m_themeIndex).frostedSurface;
 }
