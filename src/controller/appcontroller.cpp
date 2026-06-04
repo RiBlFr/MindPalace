@@ -123,6 +123,12 @@ void AppController::setupGlobalConnections() {
                 m_mainWindow->renderAnswerLayout(backText);
             });
 
+    // “连续选择简单”连胜变化，驱动中央看板的“火热连胜”徽章分档显示特效
+    connect(m_reviewController.get(), &ReviewController::signal_streakChanged,
+            this, [this](int easyStreak) {
+                m_mainWindow->updateStreakBadge(easyStreak);
+            });
+
     // 复习队列清空 → 跳转结算页
     connect(m_reviewController.get(), &ReviewController::signal_reviewFinished,
             this, [this]() {

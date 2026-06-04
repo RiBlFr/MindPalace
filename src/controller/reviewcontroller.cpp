@@ -49,6 +49,10 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
     totalReviewCount = 0;
     state = ReviewState::FinishedState;
 
+    // 进入新牌组会话：清零连胜并通知 View 收起上一牌组残留的“火热连胜”徽章。
+    easyStreak = 0;
+    emit signal_streakChanged(easyStreak);
+
     activeDeck = deck;
     activeDeckFilePath = deckFilePath;
 
@@ -143,6 +147,14 @@ bool ReviewController::submitFeedback(ReviewFeedback feedback) {
         qWarning() << "submitFeedback failed: unable to save deck file:" << error.message;
         return false;
     }
+
+    // 连胜统计：仅“熟悉”累加，其余评分立即清零；落盘成功后才计入，保证与持久化一致。
+    if (feedback == ReviewFeedback::Easy) {
+        ++easyStreak;
+    } else {
+        easyStreak = 0;
+    }
+    emit signal_streakChanged(easyStreak);
 
     reviewQueue.pop();
     if (reviewQueue.empty()) {

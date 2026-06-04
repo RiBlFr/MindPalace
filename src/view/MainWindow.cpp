@@ -30,6 +30,8 @@
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QCloseEvent>
+#include <QResizeEvent>
+#include <QPropertyAnimation>
 #include <QQmlContext>
 #include <QQmlEngine>
 
@@ -351,6 +353,29 @@ void MainWindow::setupCenterPanel() {
     buttonStack->addWidget(feedbackRow);
     buttonStack->hide();
     centerLayout->addWidget(buttonStack);
+
+    // 悬浮徽章必须最后创建：它不进布局，而是叠加在闪卡看板之上
+    setupStreakBadge();
+}
+
+void MainWindow::setupStreakBadge() {
+    // 徽章是 centerPanel 的子控件但不加入布局，靠手动 move() 悬浮在闪卡顶部居中。
+    streakBadge = new QLabel(centerPanel);
+    streakBadge->setObjectName("streakBadge");
+    streakBadge->setAlignment(Qt::AlignCenter);
+    streakBadge->setAttribute(Qt::WA_TransparentForMouseEvents); // 不挡住下方翻牌/点击
+    streakBadge->setTextInteractionFlags(Qt::NoTextInteraction);
+    streakBadge->hide();
+
+    // 彩色光晕：档位越高颜色越炽烈，连胜增长时还会脉冲一下。
+    streakGlow = new QGraphicsDropShadowEffect(streakBadge);
+    streakGlow->setOffset(0, 0);
+    streakGlow->setBlurRadius(24);
+    streakGlow->setColor(QColor(255, 140, 0, 220));
+    streakBadge->setGraphicsEffect(streakGlow);
+
+    streakPulse = new QPropertyAnimation(streakGlow, "blurRadius", this);
+    streakPulse->setDuration(460);
 }
 
 void MainWindow::initFlashCardView() {
@@ -521,6 +546,89 @@ void MainWindow::updateSummaryStats(int totalCards, double masteryRate, int tota
 
 void MainWindow::updateWeeklyChart(const std::vector<int>& data, const QStringList& labels) {
     if (weeklyChartWidget) weeklyChartWidget->setData(data, labels);
+}
+
+namespace {
+// “火热连胜”分档：阈值递增，每档有独立文案、配色与光晕颜色。
+struct StreakTier {
+    int threshold;        // 达到该连胜张数即进入此档
+    QString name;         // 档位名称（含 emoji）
+    QString bg1, bg2;     // 徽章渐变背景起止色
+    QString textColor;    // 文字颜色
+    QColor glow;          // 光晕颜色
+    int fontPx;           // 字号
+};
+
+// 注意：必须按阈值从高到低排列，便于线性向下匹配。
+const StreakTier* tierForStreak(int streak) {
+    static const StreakTier tiers[] = {
+        {15, QStringLiteral("👑 GODLIKE 神之连胜"), "#00e5ff", "#7c4dff", "#ffffff", QColor( 0, 229, 255, 235), 24},
+        {10, QStringLiteral("⭐ LEGENDARY 传说"),    "#ffd54f", "#ff7043", "#4a2600", QColor(255, 193,  7, 235), 23},
+        { 7, QStringLiteral("⚡ RAMPAGE 暴走"),       "#b388ff", "#7c4dff", "#ffffff", QColor(149, 117, 205, 230), 21},
+        { 4, QStringLiteral("🔥 火热连胜 ON FIRE"),   "#ff8a65", "#f4511e", "#ffffff", QColor(255,  87, 34, 225), 20},
+        { 2, QStringLiteral("✨ 连胜"),               "#ffe082", "#ffb300", "#5d4037", QColor(255, 179,  0, 210), 18},
+    };
+    for (const auto& t : tiers) {
+        if (streak >= t.threshold) return &t;
+    }
+    return nullptr;
+}
+} // namespace
+
+void MainWindow::updateStreakBadge(int easyStreak) {
+    if (!streakBadge) return;
+
+    const StreakTier* tier = tierForStreak(easyStreak);
+    if (!tier) {
+        // 连胜中断或不足 2 连：收起徽章并停掉残留动画。
+        if (streakPulse) streakPulse->stop();
+        streakBadge->hide();
+        return;
+    }
+
+    const bool wasVisible = streakBadge->isVisible();
+
+    streakBadge->setText(QStringLiteral("%1  ×%2").arg(tier->name).arg(easyStreak));
+    streakBadge->setStyleSheet(QStringLiteral(
+        "QLabel#streakBadge {"
+        "  color: %1;"
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 %2, stop:1 %3);"
+        "  border: 2px solid rgba(255,255,255,180);"
+        "  border-radius: 18px;"
+        "  padding: 8px 22px;"
+        "  font-size: %4px;"
+        "  font-weight: 800;"
+        "}").arg(tier->textColor, tier->bg1, tier->bg2).arg(tier->fontPx));
+
+    if (streakGlow) streakGlow->setColor(tier->glow);
+
+    streakBadge->adjustSize();
+    streakBadge->show();
+    streakBadge->raise();
+    repositionStreakBadge(); // 必须在 show() 之后，否则 isHidden() 守卫会让定位提前返回
+
+    // 每次连胜增长都来一发光晕脉冲，作为升档/续命的即时正反馈特效。
+    if (streakGlow && streakPulse) {
+        const qreal base = wasVisible ? 24.0 : 16.0;
+        streakPulse->stop();
+        streakPulse->setStartValue(base);
+        streakPulse->setKeyValueAt(0.5, 56.0);
+        streakPulse->setEndValue(28.0);
+        streakPulse->start();
+    }
+}
+
+void MainWindow::repositionStreakBadge() {
+    if (!streakBadge || !centerPanel || streakBadge->isHidden()) return;
+    streakBadge->adjustSize();
+    const int x = (centerPanel->width() - streakBadge->width()) / 2;
+    const int y = 40; // 紧贴中央看板顶部，悬浮在闪卡上方
+    streakBadge->move(qMax(0, x), y);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    repositionStreakBadge();
 }
 
 void MainWindow::showPreferencesDialog() {
