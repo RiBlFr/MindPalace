@@ -3,8 +3,10 @@ import QtQuick
 Item {
     id: root
 
-    // 监听 C++ 传进来的 themeMode（1 为极光，0 为经典）
-    property bool isAurora: typeof _reviewBridge !== "undefined" ? _reviewBridge.themeMode === 1 : true
+
+    // 主题切换重渲染时 _reviewBridge 会瞬时解析为 null，需显式判空避免读空指针报错。
+    property bool isAurora: (typeof _reviewBridge !== "undefined" && _reviewBridge !== null)
+                            ? _reviewBridge.themeMode === 1 : true
 
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."
@@ -134,17 +136,23 @@ Item {
 
                     GradientStop {
                         position: 0.0
-                        color: Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
+                            : Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
                     }
 
                     GradientStop {
                         position: 0.5 + (root.shineX - 0.5) * 0.4
-                        color: Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
+                            : Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
                     }
 
                     GradientStop {
                         position: 1.0
-                        color: Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
+                        color: root.isAurora
+                            ? Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
+                            : Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
                     }
                 }
 
