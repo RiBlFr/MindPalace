@@ -131,6 +131,9 @@ private:
     void initFlashCardView();
     QWidget* setupFeedbackButtons();
 
+    // 弹出一个渲染 Markdown 文档的对话框（用于“使用说明”“关于”）
+    void showMarkdownDialog(const QString& title, const QString& resourcePath);
+
     // 创建并初始化中央悬浮的“火热连胜”徽章（叠在闪卡看板之上）
     void setupStreakBadge();
     // 把徽章重新摆到中央看板顶部居中（窗口尺寸或内容变化时调用）

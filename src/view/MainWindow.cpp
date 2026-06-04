@@ -18,6 +18,7 @@
 #include <QQuickWidget>
 #include <QQuickItem>
 #include <QStackedWidget>
+#include <QTextBrowser>
 #include <QUrl>
 #include <QMetaObject>
 #include <QSettings>
@@ -255,8 +256,50 @@ void MainWindow::setupMenuBar() {
     viewMenu->addAction(tr("刷新统计"));
 
     QMenu *helpMenu = menuBar()->addMenu(tr("帮助(&H)"));
-    helpMenu->addAction(tr("关于"));
-    helpMenu->addAction(tr("使用说明"));
+    auto *howToUseAction = helpMenu->addAction(tr("使用说明"));
+    connect(howToUseAction, &QAction::triggered, this, [this]() {
+        showMarkdownDialog(tr("使用说明"), QStringLiteral(":/docs/HowToUse.md"));
+    });
+    auto *aboutAction = helpMenu->addAction(tr("关于"));
+    connect(aboutAction, &QAction::triggered, this, [this]() {
+        showMarkdownDialog(tr("关于"), QStringLiteral(":/docs/AboutUs.md"));
+    });
+}
+
+void MainWindow::showMarkdownDialog(const QString& title, const QString& resourcePath) {
+    QFile file(resourcePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        StyledDialogs::info(this, title, tr("无法加载文档：%1").arg(resourcePath));
+        return;
+    }
+    const QString markdown = QString::fromUtf8(file.readAll());
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(title);
+    dialog.resize(640, 560);
+    StyledDialogs::applyStyle(&dialog);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(20, 18, 20, 16);
+    layout->setSpacing(14);
+
+    auto *browser = new QTextBrowser(&dialog);
+    browser->setOpenExternalLinks(true);
+    browser->setMarkdown(markdown);
+    layout->addWidget(browser, 1);
+
+    auto *footer = new QHBoxLayout;
+    footer->addStretch();
+    auto *okBtn = new QPushButton(tr("关闭"), &dialog);
+    okBtn->setObjectName("dialogPrimary");
+    okBtn->setCursor(Qt::PointingHandCursor);
+    okBtn->setDefault(true);
+    footer->addWidget(okBtn);
+    layout->addLayout(footer);
+
+    connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
+
+    dialog.exec();
 }
 
 void MainWindow::setupLeftPanel() {
