@@ -70,6 +70,10 @@ namespace MindPalace::Controller {
         // 用于在复习期间记忆当前牌组的名称
         QString m_currentReviewingDeckName;
 
+        // 本次会话开始前，当前牌组今日已复习的卡片数（来自持久化的 lastReviewed）。
+        // 作为“今日复习”进度的基线，保证关闭重开应用后已完成的进度不会被清零。
+        int m_todayReviewedBaseline = 0;
+
         // ==========================================
         // 2. 初始化流水线
         // ==========================================
