@@ -113,8 +113,12 @@ void AppController::setupGlobalConnections() {
                 if (Model::Card* card = m_reviewController->currentCard()) {
                     m_mainWindow->preloadAnswerText(card->back);
                 }
+                // 叠加今日已复习基线：进度 = 历史已完成 + 本会话已完成，
+                // 总量 = 历史已完成 + 本会话待复习，确保关闭重开后进度不归零。
                 const int total = m_reviewController->totalCount();
-                m_mainWindow->updateProgressView(total - remaining, total);
+                const int sessionDone = total - remaining;
+                m_mainWindow->updateProgressView(m_todayReviewedBaseline + sessionDone,
+                                                 m_todayReviewedBaseline + total);
             });
 
     // ReviewController 进入答案态 → 揭示背面、弹出评分按钮
@@ -133,10 +137,8 @@ void AppController::setupGlobalConnections() {
     connect(m_reviewController.get(), &ReviewController::signal_reviewFinished,
             this, [this]() {
                 m_mainWindow->showFinishedSummaryPage();
-                m_mainWindow->updateProgressView(
-                    m_reviewController->totalCount(),
-                    m_reviewController->totalCount()
-                );
+                const int dayTotal = m_todayReviewedBaseline + m_reviewController->totalCount();
+                m_mainWindow->updateProgressView(dayTotal, dayTotal);
             });
 
     // 牌组增删改 → 刷新左侧列表
@@ -273,6 +275,10 @@ void AppController::handleStartReview(const QString& deckName) {
         return;
     }
 
+    // 今日复习进度基线：从持久化的卡片 lastReviewed 还原“今日已复习”的数量，
+    // 这样关闭并重新打开应用后，进度条不会被错误地清零重算。
+    m_todayReviewedBaseline = targetDeck->getReviewedTodayCount();
+
     // 软覆盖拦截：判断今天是否为该牌组的“强制休假日”
     // ==========================================
     QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
@@ -282,7 +288,7 @@ void AppController::handleStartReview(const QString& deckName) {
             qDebug() << "AppController 软拦截: 用户已为" << deckName << "安排了休假。直接放行！";
             // 伪造一个复习完成的假象，给予用户强烈的正反馈
             m_mainWindow->showFinishedSummaryPage();
-            m_mainWindow->updateProgressView(0, 0);
+            m_mainWindow->updateProgressView(m_todayReviewedBaseline, m_todayReviewedBaseline);
             return; // 核心：直接 return，阻止 ReviewController 启动！
         }
     }
@@ -300,7 +306,8 @@ void AppController::handleStartReview(const QString& deckName) {
         // 否则切换卡组时旧的提问/评分按钮会残留在屏幕上。
         qDebug() << "AppController: 该牌组今日没有任何到期卡片。";
         m_mainWindow->showFinishedSummaryPage();
-        m_mainWindow->updateProgressView(0, 0);
+        // 没有待复习卡片时，进度即为今日已复习的全部（可能为 0，也可能是今天早些时候已完成的量）。
+        m_mainWindow->updateProgressView(m_todayReviewedBaseline, m_todayReviewedBaseline);
     }
 }
 

@@ -4,6 +4,7 @@
 
 #include "Deck.h"
 #include <algorithm>
+#include <QDate>
 
 namespace MindPalace::Model {
 
@@ -18,6 +19,13 @@ namespace MindPalace::Model {
     int Deck::getDueCount() const {
         return std::count_if(cards.begin(), cards.end(), [](const std::unique_ptr<Card>& c) {
             return c && c->isDue();
+        });
+    }
+
+    int Deck::getReviewedTodayCount() const {
+        const QDate today = QDate::currentDate();
+        return std::count_if(cards.begin(), cards.end(), [&today](const std::unique_ptr<Card>& c) {
+            return c && c->lastReviewed == today;
         });
     }
 
