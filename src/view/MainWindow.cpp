@@ -129,7 +129,7 @@ void MainWindow::updateDeckListView(const std::vector<QString>& deckNames) const
     // 记录重建前选中的卡组。增删卡片 / 牌组都会触发列表重建，若不还原选区，
     // currentTextChanged 不会再次发出，右侧“总体统计/掌握率”就会丢失上下文而显示陈旧值。
     const QString previous =
-        deckListWidget->currentItem() ? deckListWidget->currentItem()->text() : QString();
+            deckListWidget->currentItem() ? deckListWidget->currentItem()->text() : QString();
 
     {
         // 重建过程中屏蔽信号，避免 clear()/addItem() 触发的中间态反复重启复习会话与统计刷新
@@ -248,12 +248,9 @@ void MainWindow::setupMenuBar() {
     quitAction->setShortcut(QKeySequence::Quit);
     connect(quitAction, &QAction::triggered, this, &QWidget::close);
 
-    QMenu *editMenu = menuBar()->addMenu(tr("编辑(&E)"));
-    auto *prefAction = editMenu->addAction(tr("偏好设置"));
+    QMenu *settingsMenu = menuBar()->addMenu(tr("设置(&S)"));
+    auto *prefAction = settingsMenu->addAction(tr("偏好设置"));
     connect(prefAction, &QAction::triggered, this, &MainWindow::showPreferencesDialog);
-
-    QMenu *viewMenu = menuBar()->addMenu(tr("查看(&V)"));
-    viewMenu->addAction(tr("刷新统计"));
 
     QMenu *helpMenu = menuBar()->addMenu(tr("帮助(&H)"));
     auto *howToUseAction = helpMenu->addAction(tr("使用说明"));
@@ -593,29 +590,29 @@ void MainWindow::updateWeeklyChart(const std::vector<int>& data, const QStringLi
 
 namespace {
 // “火热连胜”分档：阈值递增，每档有独立文案、配色与光晕颜色。
-struct StreakTier {
-    int threshold;        // 达到该连胜张数即进入此档
-    QString name;         // 档位名称（含 emoji）
-    QString bg1, bg2;     // 徽章渐变背景起止色
-    QString textColor;    // 文字颜色
-    QColor glow;          // 光晕颜色
-    int fontPx;           // 字号
-};
+    struct StreakTier {
+        int threshold;        // 达到该连胜张数即进入此档
+        QString name;         // 档位名称（含 emoji）
+        QString bg1, bg2;     // 徽章渐变背景起止色
+        QString textColor;    // 文字颜色
+        QColor glow;          // 光晕颜色
+        int fontPx;           // 字号
+    };
 
 // 注意：必须按阈值从高到低排列，便于线性向下匹配。
-const StreakTier* tierForStreak(int streak) {
-    static const StreakTier tiers[] = {
-        {15, QStringLiteral("👑 GODLIKE 神之连胜"), "#00e5ff", "#7c4dff", "#ffffff", QColor( 0, 229, 255, 235), 24},
-        {10, QStringLiteral("⭐ LEGENDARY 传说"),    "#ffd54f", "#ff7043", "#4a2600", QColor(255, 193,  7, 235), 23},
-        { 7, QStringLiteral("⚡ RAMPAGE 暴走"),       "#b388ff", "#7c4dff", "#ffffff", QColor(149, 117, 205, 230), 21},
-        { 4, QStringLiteral("🔥 火热连胜 ON FIRE"),   "#ff8a65", "#f4511e", "#ffffff", QColor(255,  87, 34, 225), 20},
-        { 2, QStringLiteral("✨ 连胜"),               "#ffe082", "#ffb300", "#5d4037", QColor(255, 179,  0, 210), 18},
-    };
-    for (const auto& t : tiers) {
-        if (streak >= t.threshold) return &t;
+    const StreakTier* tierForStreak(int streak) {
+        static const StreakTier tiers[] = {
+                {15, QStringLiteral("👑 GODLIKE 神之连胜"), "#00e5ff", "#7c4dff", "#ffffff", QColor( 0, 229, 255, 235), 24},
+                {10, QStringLiteral("⭐ LEGENDARY 传说"),    "#ffd54f", "#ff7043", "#4a2600", QColor(255, 193,  7, 235), 23},
+                { 7, QStringLiteral("⚡ RAMPAGE 暴走"),       "#b388ff", "#7c4dff", "#ffffff", QColor(149, 117, 205, 230), 21},
+                { 4, QStringLiteral("🔥 火热连胜 ON FIRE"),   "#ff8a65", "#f4511e", "#ffffff", QColor(255,  87, 34, 225), 20},
+                { 2, QStringLiteral("✨ 连胜"),               "#ffe082", "#ffb300", "#5d4037", QColor(255, 179,  0, 210), 18},
+        };
+        for (const auto& t : tiers) {
+            if (streak >= t.threshold) return &t;
+        }
+        return nullptr;
     }
-    return nullptr;
-}
 } // namespace
 
 void MainWindow::updateStreakBadge(int easyStreak) {
@@ -633,15 +630,15 @@ void MainWindow::updateStreakBadge(int easyStreak) {
 
     streakBadge->setText(QStringLiteral("%1  ×%2").arg(tier->name).arg(easyStreak));
     streakBadge->setStyleSheet(QStringLiteral(
-        "QLabel#streakBadge {"
-        "  color: %1;"
-        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 %2, stop:1 %3);"
-        "  border: 2px solid rgba(255,255,255,180);"
-        "  border-radius: 18px;"
-        "  padding: 8px 22px;"
-        "  font-size: %4px;"
-        "  font-weight: 800;"
-        "}").arg(tier->textColor, tier->bg1, tier->bg2).arg(tier->fontPx));
+                                       "QLabel#streakBadge {"
+                                       "  color: %1;"
+                                       "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 %2, stop:1 %3);"
+                                       "  border: 2px solid rgba(255,255,255,180);"
+                                       "  border-radius: 18px;"
+                                       "  padding: 8px 22px;"
+                                       "  font-size: %4px;"
+                                       "  font-weight: 800;"
+                                       "}").arg(tier->textColor, tier->bg1, tier->bg2).arg(tier->fontPx));
 
     if (streakGlow) streakGlow->setColor(tier->glow);
 
@@ -770,7 +767,7 @@ void MainWindow::applyTheme(int themeIndex) {
         if (frame->property("role") == "surface") {
             if (frosted) {
                 frame->setStyleSheet(QString("background-color: rgba(%1, %2, %3, %4); border: 1px solid rgba(255, 255, 255, 220); border-radius: 16px;")
-                                     .arg(Theme::Surface.red()).arg(Theme::Surface.green()).arg(Theme::Surface.blue()).arg(Theme::Surface.alpha()));
+                                             .arg(Theme::Surface.red()).arg(Theme::Surface.green()).arg(Theme::Surface.blue()).arg(Theme::Surface.alpha()));
                 addSoftShadow(frame);
             } else {
                 frame->setStyleSheet(""); // 让 QSS 重新接管
