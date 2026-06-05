@@ -1,5 +1,5 @@
 #include "MainWindow.h"
-
+#include <QCheckBox>
 #include <QApplication>
 #include <QFile>
 #include <QFrame>
@@ -688,7 +688,7 @@ void MainWindow::showPreferencesDialog() {
     promptLabel->setObjectName("dialogPrompt");
     layout->addWidget(promptLabel);
 
-    // 按注册表动态生成单选项：新增主题后这里会自动出现，无需修改
+    // 按注册表动态生成单选项
     std::vector<QRadioButton*> themeRadios;
     const auto& themes = Theme::availableThemes();
     themeRadios.reserve(themes.size());
@@ -698,6 +698,20 @@ void MainWindow::showPreferencesDialog() {
         layout->addWidget(radio);
         themeRadios.push_back(radio);
     }
+
+    // ==========================================
+    // 【新增区】添加分割线与随机打乱复习选项
+    // ==========================================
+    auto *line = new QFrame(&dialog);
+    line->setFrameShape(QFrame::HLine);
+    line->setStyleSheet("background-color: rgba(150, 150, 150, 50);");
+    layout->addWidget(line);
+
+    QSettings settings("MindPalace", "Settings");
+    auto *shuffleCheck = new QCheckBox(tr("随机打乱复习顺序"), &dialog);
+    shuffleCheck->setChecked(settings.value("shuffleReview", false).toBool());
+    layout->addWidget(shuffleCheck);
+    // ==========================================
 
     auto *footer = new QHBoxLayout;
     footer->setSpacing(10);
@@ -717,6 +731,10 @@ void MainWindow::showPreferencesDialog() {
     connect(okBtn, &QPushButton::clicked, &dialog, &QDialog::accept);
 
     if (dialog.exec() == QDialog::Accepted) {
+        // 【新增区】用户点击确定后，保存打乱顺序的设置
+        settings.setValue("shuffleReview", shuffleCheck->isChecked());
+
+        // 处理主题切换
         int selectedIndex = m_themeIndex;
         for (int i = 0; i < static_cast<int>(themeRadios.size()); ++i) {
             if (themeRadios[i]->isChecked()) {
