@@ -8,6 +8,7 @@
 class QLabel;
 class QLineEdit;
 class QTableWidget;
+class QEvent;
 
 struct CardDisplayInfo {
     QString id;
@@ -28,6 +29,9 @@ public:
     CardManagerDialog(const QString& deckName,
                       const std::vector<CardDisplayInfo>& cards,
                       QWidget* parent = nullptr);
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 signals:
     void signal_requestDeleteCard(const QString& deckName, const QString& cardId);

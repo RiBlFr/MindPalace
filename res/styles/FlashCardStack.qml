@@ -54,6 +54,7 @@ Item {
     property real switchPhase: 0
     property real bgFadeInPhase: 1.0
     property bool flipInputEnabled: true
+    property bool flipAnimationEnabled: true
 
     readonly property int cardCount: cardsModel.count
     readonly property int nextIndex: switching ? pendingIndex : normalizedIndex(currentIndex + 1)
@@ -63,6 +64,7 @@ Item {
     // C++ 设置新题目：重置卡片状态，直接更新 currentFront/currentBack
     onQuestionTextChanged: {
         if (questionText.length === 0) return
+        flipAnimationEnabled = false
         currentFront = questionText
         currentBack = ""
         cardsModel.clear()
@@ -77,6 +79,9 @@ Item {
         flipped = false
         switching = false
         switchPhase = 0
+        Qt.callLater(function() {
+            flipAnimationEnabled = true
+        })
     }
 
     // C++ 揭示答案：直接更新 currentBack，同时保持 cardsModel 同步
@@ -326,6 +331,7 @@ Item {
                 frontText: root.currentFront
                 backText: root.currentBack
                 flipped: root.flipped
+                animateFlip: root.flipAnimationEnabled
 
                 bodyOffsetX: root.backCardBodyOffsetX * root.switchPhase
                 bodyOffsetY: root.backCardBodyOffsetY * root.switchPhase

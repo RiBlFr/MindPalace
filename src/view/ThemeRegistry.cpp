@@ -12,7 +12,7 @@ const std::vector<ThemeDef>& availableThemes() {
           /*frostedSurface=*/false },
 
         { QStringLiteral("aurora"),
-          QStringLiteral("极光"),
+          QStringLiteral("暗色"),
           QStringLiteral(":/styles/theme_aurora.qss"),
           /*frostedSurface=*/true },
     };

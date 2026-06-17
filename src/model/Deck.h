@@ -18,15 +18,9 @@ namespace MindPalace::Model {
 
     class Deck {
     public:
-        // ==========================================
-        // 1. 构造函数
-        // ==========================================
         Deck() = default;
         explicit Deck(const QString& name);
 
-        // ==========================================
-        // 2. 基础属性
-        // ==========================================
         QString deckId;
         QString deckName;
 
@@ -36,12 +30,9 @@ namespace MindPalace::Model {
         // Value: 操作指令 (1 = 强制复习, -1 = 强制休假, 其他值/不存在则遵循算法)
         QMap<QString, int> manualSchedule;
 
-        // ==========================================
-        // 3. 核心管理接口
-        // ==========================================
         /**
          * @brief 向牌组添加卡片
-         * @param card 必须使用 std::move 转移所有权
+         * @param card 使用 std::move 转移所有权
          */
         void addCard(std::unique_ptr<Card> card);
 
@@ -60,10 +51,7 @@ namespace MindPalace::Model {
          */
         int getReviewedTodayCount() const;
 
-        // ==========================================
-        // 4. 持久化接口
-        // ==========================================
-        QJsonObject toJson() const; // 将整个牌组（含所有卡片）转为 JSON
+        QJsonObject toJson() const;
         void fromJson(const QJsonObject& json);
     };
 

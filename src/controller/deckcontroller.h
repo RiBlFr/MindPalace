@@ -10,12 +10,9 @@
 namespace MindPalace::Controller {
 
 class DeckController : public QObject {
-    Q_OBJECT         // 【新增】Qt 元对象宏，告诉编译器这个类有信号和槽
+    Q_OBJECT
 
 public:
-    // ==========================================
-    // 【新增】数据统计专用结构体.
-    // ==========================================
     struct DeckStats {
         int totalCards = 0;      // 总卡片数
         int totalReviews = 0;    // 累计复习次数
@@ -29,7 +26,7 @@ public:
     /**
      * @brief 构造牌组控制器，并自动从磁盘加载已有牌组。
      * @param decksDirPath 牌组 JSON 文件所在目录，默认为 data/decks。
-     * @param parent 【新增】Qt 的父对象指针，用于挂载到对象树上，防止内存泄漏
+     * @param parent Qt 父对象
      */
     explicit DeckController(const QString& decksDirPath = "data/decks"
         , QObject* parent = nullptr);
@@ -43,9 +40,15 @@ public:
     bool createDeck(const QString& name);
 
     /**
+     * @brief Create a deck and immediately populate it with generated cards.
+     */
+    bool createDeckFromCards(const QString& name,
+                             const std::vector<std::pair<QString, QString>>& cards);
+
+    /**
      * @brief 根据牌组名称删除牌组，并移除对应的 JSON 文件。
      * 删除时去除输入名称首尾空白，并在删除磁盘文件成功后再移除内存对象。
-     * 已经更改为：若对应磁盘文件已不存在，也会移除内存中的牌组残留并视为删除成功。
+     * 若对应磁盘文件已不存在，也会移除内存中的牌组记录并视为删除成功。
      * @param deckName 已存在的用户可见牌组名称。
      * @return 内存状态和磁盘状态均更新成功时返回 true，否则返回 false。
      */
@@ -91,8 +94,8 @@ public:
      * 不影响 SM-2 算法参数（ease/interval/lastReviewed/nextReviewDate）。
      * @param deckName 卡片所在的卡组名称。
      * @param cardId 卡片的唯一 ID。
-     * @param newFront 新的正面文本（trim 后必须非空）。
-     * @param newBack 新的背面文本（trim 后必须非空）。
+     * @param newFront 新的正面文本（trim 后需非空）。
+     * @param newBack 新的背面文本（trim 后需非空）。
      * @return 修改并落盘成功返回 true；写盘失败时内存回滚到原值。
      */
     bool updateCard(const QString& deckName, const QString& cardId,
@@ -107,12 +110,8 @@ public:
     bool importDeckFromFile(const QString& sourceFilePath);
 
 signals:
-    // ==========================================
-    // 【新增区】对外广播的信号器官
-    // ==========================================
-
     /**
-     * @brief 当底层牌组数据发生增、删、改时，触发此信号。
+     * @brief 当底层牌组数据发生增、删、改时，发出此信号。
      * AppController 监听到后，会立即通知 MainWindow 重新拉取数据并刷新 UI。
      */
     void signal_deckListChanged();

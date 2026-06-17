@@ -1,88 +1,226 @@
 /* =======================================================
-   【极光毛玻璃模式】 Theme Aurora
+   Dark Theme
 ======================================================= */
-/* 1. 全局极光渐变背景 */
+
 #mainWindowRoot {
-    background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #e0c3fc, stop:1 #8ec5fc);
+    background-color: #050910;
 }
-/* 侧边栏与中央区透明度 */
-QWidget[panel="side"] { background-color: rgba(243, 246, 250, 150); }
-#centerPanel { background-color: transparent; }
 
-/* 2. 顶部菜单栏 */
-QMenuBar { background-color: transparent; border-bottom: 1px solid rgba(255, 255, 255, 80); }
-QMenuBar::item { padding: 8px 12px; margin: 4px 2px; border-radius: 6px; color: #1f2937; background: transparent;}
-QMenuBar::item:selected { background: rgba(255, 255, 255, 100); }
-QMenu { background-color: rgba(255, 255, 255, 220); border: 1px solid rgba(255, 255, 255, 200); border-radius: 8px; padding: 4px; }
-QMenu::item { padding: 6px 24px 6px 12px; border-radius: 4px; color: #1f2937; }
-QMenu::item:selected { background-color: rgba(139, 117, 250, 40); color: #8B75FA; }
+QMainWindow {
+    background-color: #050910;
+    color: #e8eef8;
+}
 
-/* 3. 左侧卡组列表 */
-QListWidget#deckList { background-color: rgba(255, 255, 255, 140); border: 1px solid rgba(255, 255, 255, 200); border-radius: 12px; padding: 6px; outline: none; }
-QListWidget#deckList::item { padding: 10px 12px; margin: 2px; border-radius: 8px; color: #334155; }
-QListWidget#deckList::item:hover { background: rgba(255, 255, 255, 180); color: #8B75FA; }
-QListWidget#deckList::item:selected { background: #8B75FA; color: #ffffff; }
+QWidget {
+    color: #dce6f5;
+}
 
-/* 4. 右侧进度条 */
-QProgressBar#dailyProgress { height: 18px; border: 1px solid rgba(255, 255, 255, 150); border-radius: 9px; background: rgba(255, 255, 255, 120); text-align: center; color: #334155; font-size: 11px; font-weight: bold; }
-QProgressBar#dailyProgress::chunk { border-radius: 8px; background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #9B88FA, stop:1 #8B75FA); }
-
-/* 5. 通用按钮 */
-QPushButton { outline: none; }
-
-/* 所有操作按钮统一为「四个难度按钮」的玻璃拟态风格：
-   半透明白底 + 白色细边 + 强调色底边；hover 提亮，pressed 填充强调色。 */
-#btnAddDeck, #btnCalendar, #btnDeleteDeck, #btnResetDeck, #btnShowAnswer,
-#btnForget, #btnHard, #btnNormal, #btnEasy {
-    background-color: rgba(255, 255, 255, 140);
-    border: 1.5px solid rgba(255, 255, 255, 220);
+#centerPanel {
+    background-color: #07101b;
+    border: 1px solid rgba(67, 90, 118, 130);
     border-radius: 12px;
+}
+
+QWidget[panel="side"] {
+    background-color: #050910;
+}
+
+QLabel {
+    color: #e8eef8;
+}
+
+QMenuBar {
+    background-color: #080d15;
+    border-bottom: 1px solid rgba(55, 71, 94, 150);
+}
+
+QMenuBar::item {
+    padding: 8px 12px;
+    margin: 5px 2px;
+    border-radius: 6px;
+    color: #d5deea;
+    background: transparent;
+}
+
+QMenuBar::item:selected {
+    background-color: rgba(47, 132, 255, 42);
+    color: #ffffff;
+}
+
+QMenu {
+    background-color: #0a121e;
+    border: 1px solid rgba(72, 96, 126, 180);
+    border-radius: 8px;
+    padding: 6px;
+}
+
+QMenu::item {
+    padding: 7px 28px 7px 16px;
+    border-radius: 5px;
+    color: #d5deea;
+}
+
+QMenu::item:selected {
+    background-color: rgba(48, 144, 255, 62);
+    color: #ffffff;
+}
+
+QListWidget#deckList {
+    background-color: rgba(8, 15, 26, 235);
+    border: 1px solid rgba(72, 96, 126, 150);
+    border-radius: 12px;
+    padding: 10px;
+    outline: none;
+    color: #dce6f5;
+}
+
+QListWidget#deckList::item {
+    min-height: 40px;
+    padding: 10px 14px;
+    margin: 4px 2px;
+    border-radius: 8px;
+    color: #dce6f5;
+}
+
+QListWidget#deckList::item:hover {
+    background-color: rgba(30, 91, 178, 95);
+    color: #ffffff;
+}
+
+QListWidget#deckList::item:selected {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #0b4a93, stop:1 #122a6b);
+    border: 1px solid #2897ff;
+    color: #ffffff;
+}
+
+QFrame[role="surface"] {
+    background-color: rgba(11, 18, 30, 225);
+    border: 1px solid rgba(72, 96, 126, 150);
+    border-radius: 12px;
+}
+
+QProgressBar#dailyProgress {
+    min-height: 18px;
+    max-height: 18px;
+    border: 1px solid rgba(121, 143, 175, 120);
+    border-radius: 9px;
+    background-color: #1a2432;
+    text-align: center;
+    color: #ffffff;
+    font-size: 11px;
     font-weight: bold;
 }
-#btnAddDeck:hover, #btnCalendar:hover, #btnDeleteDeck:hover, #btnResetDeck:hover, #btnShowAnswer:hover,
-#btnForget:hover, #btnHard:hover, #btnNormal:hover, #btnEasy:hover {
-    background-color: rgba(255, 255, 255, 220);
+
+QProgressBar#dailyProgress::chunk {
+    border-radius: 8px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #2a95ff, stop:1 #7c56ff);
 }
-#btnAddDeck:pressed, #btnCalendar:pressed, #btnDeleteDeck:pressed, #btnResetDeck:pressed, #btnShowAnswer:pressed,
-#btnForget:pressed, #btnHard:pressed, #btnNormal:pressed, #btnEasy:pressed {
-    color: white;
-    border: none;
+
+QPushButton {
+    outline: none;
+    min-height: 36px;
+    border-radius: 8px;
+    font-weight: 700;
+    color: #dfe9f8;
+    background-color: rgba(12, 24, 42, 220);
+    border: 1px solid rgba(55, 147, 255, 190);
+}
+
+QPushButton:hover {
+    color: #ffffff;
+}
+
+QPushButton:pressed {
     padding-top: 2px;
 }
 
-/* 各按钮的强调色（文字 + 底边 + hover 描边 + pressed 填充） */
-#btnAddDeck { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
-#btnAddDeck:hover { border-color: #8B75FA; }
-#btnAddDeck:pressed { background-color: #8B75FA; }
+QPushButton:disabled {
+    color: rgba(223, 233, 248, 125);
+}
 
-#btnCalendar { color: #638BFA; border-bottom: 2px solid #638BFA; }
-#btnCalendar:hover { border-color: #638BFA; }
-#btnCalendar:pressed { background-color: #638BFA; }
+#btnAddDeck, #btnShowAnswer {
+    color: #eaf4ff;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(8, 47, 105, 225),
+                                stop:1 rgba(16, 38, 91, 230));
+    border: 1px solid #248dff;
+}
 
-#btnDeleteDeck { color: #F43F5E; border-bottom: 2px solid #F43F5E; }
-#btnDeleteDeck:hover { border-color: #F43F5E; }
-#btnDeleteDeck:pressed { background-color: #F43F5E; }
+#btnAddDeck:hover, #btnShowAnswer:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(13, 67, 141, 235),
+                                stop:1 rgba(23, 51, 116, 240));
+}
 
-#btnResetDeck { color: #F59E0B; border-bottom: 2px solid #F59E0B; }
-#btnResetDeck:hover { border-color: #F59E0B; }
-#btnResetDeck:pressed { background-color: #F59E0B; }
+#btnCheckIn {
+    min-height: 30px;
+    color: #75ffd0;
+    background-color: rgba(10, 66, 55, 190);
+    border: 1px solid rgba(58, 224, 178, 165);
+    border-radius: 8px;
+}
 
-#btnShowAnswer { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
-#btnShowAnswer:hover { border-color: #8B75FA; }
-#btnShowAnswer:pressed { background-color: #8B75FA; }
+#btnCheckIn:hover {
+    background-color: rgba(13, 88, 72, 215);
+}
 
-#btnForget { color: #F43F5E; border-bottom: 2px solid #F43F5E; }
-#btnForget:hover { border-color: #F43F5E; }
-#btnForget:pressed { background-color: #F43F5E; }
+#btnCheckIn:disabled {
+    color: #79ffd2;
+    background-color: rgba(10, 66, 55, 190);
+    border: 1px solid rgba(58, 224, 178, 165);
+}
 
-#btnHard { color: #F59E0B; border-bottom: 2px solid #F59E0B; }
-#btnHard:hover { border-color: #F59E0B; }
-#btnHard:pressed { background-color: #F59E0B; }
+#btnCalendar {
+    color: #9ff7ff;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(0, 90, 97, 210),
+                                stop:1 rgba(7, 70, 84, 225));
+    border: 1px solid #12d8df;
+}
 
-#btnNormal { color: #8B75FA; border-bottom: 2px solid #8B75FA; }
-#btnNormal:hover { border-color: #8B75FA; }
-#btnNormal:pressed { background-color: #8B75FA; }
+#btnDeleteDeck {
+    color: #ffccd6;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(105, 13, 37, 225),
+                                stop:1 rgba(70, 15, 32, 225));
+    border: 1px solid #ff4568;
+}
 
-#btnEasy { color: #10B981; border-bottom: 2px solid #10B981; }
-#btnEasy:hover { border-color: #10B981; }
-#btnEasy:pressed { background-color: #10B981; }
+#btnResetDeck {
+    color: #ffdca3;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(112, 67, 4, 225),
+                                stop:1 rgba(78, 48, 7, 225));
+    border: 1px solid #ff9f1a;
+}
+
+#btnForget, #btnHard, #btnNormal, #btnEasy {
+    border-radius: 10px;
+    min-height: 60px;
+}
+
+#btnForget {
+    color: #ffd0d8;
+    border-color: #ff4568;
+    background-color: rgba(95, 17, 37, 210);
+}
+
+#btnHard {
+    color: #ffe2ae;
+    border-color: #ff9f1a;
+    background-color: rgba(93, 55, 7, 210);
+}
+
+#btnNormal {
+    color: #e8dcff;
+    border-color: #7c56ff;
+    background-color: rgba(45, 30, 91, 210);
+}
+
+#btnEasy {
+    color: #c9ffe9;
+    border-color: #31e1aa;
+    background-color: rgba(7, 74, 56, 210);
+}
