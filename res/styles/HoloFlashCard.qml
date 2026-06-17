@@ -12,6 +12,7 @@ Item {
     property string frontText: "正面\n\n点击卡片查看答案"
     property string backText: "反面\n\n隐藏中..."
     property bool flipped: false
+    property bool animateFlip: true
 
     property real maxTilt: 12
     property real tiltX: 0
@@ -27,8 +28,8 @@ Item {
 
     Item {
         id: card
-        width: Math.min(760, Math.max(220, parent.width - 48))
-        height: Math.min(460, Math.max(180, parent.height - 48))
+        width: Math.min(835, Math.max(220, parent.width - 96))
+        height: Math.min(520, Math.max(180, parent.height - 96))
 
         x: (parent.width - width) / 2 + root.bodyOffsetX
         y: (parent.height - height) / 2 + root.bodyOffsetY
@@ -36,6 +37,7 @@ Item {
         property real flipAngle: root.flipped ? 180 : 0
 
         Behavior on flipAngle {
+            enabled: root.animateFlip
             NumberAnimation {
                 duration: 420
                 easing.type: Easing.OutCubic
@@ -89,7 +91,7 @@ Item {
                 anchors.margins: -16
                 anchors.topMargin: 8
                 radius: cardBody.radius + 16
-                color: "#08102040" // 带有深蓝紫基调的超低透明度
+                color: root.isAurora ? "#10f0ff20" : "#08102040"
             }
 
             // 第二层：主光源投影（中等范围，起过渡作用）
@@ -98,7 +100,7 @@ Item {
                 anchors.margins: -8
                 anchors.topMargin: 18
                 radius: cardBody.radius + 8
-                color: "#0C102040"
+                color: root.isAurora ? "#248cff28" : "#0C102040"
             }
 
             // 第三层：实体接触阴影（贴近卡片底部，颜色最深，营造重量感）
@@ -107,7 +109,7 @@ Item {
                 anchors.margins: -2
                 anchors.topMargin: 26
                 radius: cardBody.radius + 2
-                color: "#12102040"
+                color: root.isAurora ? "#00192c55" : "#12102040"
             }
         }
 
@@ -138,21 +140,21 @@ Item {
                     GradientStop {
                         position: 0.0
                         color: root.isAurora
-                            ? Qt.hsla((265 - 30 + root.shineX * 60) / 360, 0.75, 0.45, 1.0)
+                            ? Qt.rgba(0.03, 0.09 + root.shineY * 0.04, 0.34 + root.shineX * 0.07, 1.0)
                             : Qt.hsla((230 - 30 + root.shineX * 60) / 360, 0.66, 0.30, 1.0)
                     }
 
                     GradientStop {
                         position: 0.5 + (root.shineX - 0.5) * 0.4
                         color: root.isAurora
-                            ? Qt.hsla((240 - 30 + root.shineY * 60) / 360, 0.80, 0.55, 1.0)
+                            ? Qt.rgba(0.10, 0.34 + root.shineY * 0.10, 0.58 + root.shineX * 0.08, 1.0)
                             : Qt.hsla((205 - 30 + root.shineY * 60) / 360, 0.70, 0.40, 1.0)
                     }
 
                     GradientStop {
                         position: 1.0
                         color: root.isAurora
-                            ? Qt.hsla((210 - 30 + (1.0 - root.shineX) * 60) / 360, 0.85, 0.60, 1.0)
+                            ? Qt.rgba(0.00, 0.70 + root.shineY * 0.09, 0.68 + root.shineX * 0.10, 1.0)
                             : Qt.hsla((179 - 30 + (1.0 - root.shineX) * 60) / 360, 0.70, 0.48, 1.0)
                     }
                 }
@@ -299,7 +301,7 @@ Item {
                 radius: parent.radius
                 color: "transparent"
                 border.width: 1
-                border.color: "#80ffffff"
+                border.color: root.isAurora ? "#8ff5ff" : "#80ffffff"
             }
 
             Item {

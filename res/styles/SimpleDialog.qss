@@ -1,5 +1,10 @@
 QDialog#simpleDialog {
     background: #ffffff;
+    color: #111827;
+}
+
+QDialog#simpleDialog QWidget {
+    color: #111827;
 }
 
 QLabel#dialogPrompt {
@@ -13,6 +18,12 @@ QLabel#dialogMessage {
     font-size: 13px;
     color: #475569;
     padding: 2px 0;
+}
+
+QRadioButton,
+QCheckBox {
+    color: #111827;
+    font-size: 13px;
 }
 
 QLineEdit#dialogInput {

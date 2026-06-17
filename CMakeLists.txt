@@ -25,6 +25,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         Widgets
         Core
         Gui
+        Network
         QuickWidgets
         Quick
         Qml
@@ -43,15 +44,21 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 )
 
 add_executable(MindPalace ${SOURCES})
+set_target_properties(MindPalace PROPERTIES WIN32_EXECUTABLE TRUE)
 
 target_link_libraries(MindPalace PRIVATE
         Qt6::Widgets
         Qt6::Core
         Qt6::Gui
+        Qt6::Network
         Qt6::QuickWidgets
         Qt6::Quick
         Qt6::Qml
 )
+
+if (WIN32)
+    target_link_libraries(MindPalace PRIVATE dwmapi)
+endif()
 
 enable_testing()
 

@@ -1,4 +1,4 @@
-//
+﻿//
 // Created by Arian on 2026/5/25.
 //
 
@@ -7,7 +7,11 @@
 
 #include <QObject>
 #include <memory>
+#include <QDate>
+#include <QMap>
+#include <QSet>
 #include <QString>
+#include <QStringList>
 
 class MainWindow;
 namespace MindPalace::Controller {
@@ -19,8 +23,8 @@ namespace MindPalace::Controller {
 
     /**
      * @class AppController
-     * @brief 全局生命周期与事件路由中枢
-     * 负责实例化并管理 MVC 架构中的核心控制器与主视图，实现顶层模块间的物理隔离与信号缝合。
+     * @brief 管理应用生命周期与主要事件路由。
+     * 负责创建控制器和主窗口，并集中连接跨模块信号。
      */
     class AppController : public QObject {
         Q_OBJECT
@@ -29,27 +33,25 @@ namespace MindPalace::Controller {
         explicit AppController(QObject *parent = nullptr);
         ~AppController() override;
 
-        // 禁用拷贝，保证单例中枢
+        // AppController owns the application-level objects; copying it would
+        // duplicate that ownership.
         AppController(const AppController&) = delete;
         AppController& operator=(const AppController&) = delete;
 
         /**
-         * @brief 点火函数：启动应用程序，展示主窗口
+         * @brief 启动应用程序并展示主窗口。
          */
         void start();
+        bool showStartupReviewReminder();
 
         // 日历看板专用查询接口
-        // ==========================================
         /**
          * @brief 获取指定月份的总体复习计划分布
          * @return 映射表：具体的某一天 -> 那天需要复习的牌组名称列表
          */
         QMap<QDate, QStringList> getCalendarData(int year, int month);
 
-    public slots: // 注意：可以放在 public slots 下，方便未来与 UI 信号绑定
-        // ==========================================
-        // 【新增】日历看板专用修改接口
-        // ==========================================
+    public slots:
         /**
          * @brief 修改指定牌组在某天的复习状态（软覆盖算法）
          * @param deckName 牌组名称
@@ -59,9 +61,7 @@ namespace MindPalace::Controller {
         void handleUpdateDeckSchedule(const QString& deckName, const QDate& date, int status);
 
     private:
-        // ==========================================
-        // 1. 核心组件托管区 (RAII).
-        // ==========================================
+        // Owned application components.
         std::unique_ptr<DeckController> m_deckController;
         std::unique_ptr<ReviewController> m_reviewController;
         std::unique_ptr<MainWindow> m_mainWindow;
@@ -74,14 +74,11 @@ namespace MindPalace::Controller {
         // 作为“今日复习”进度的基线，保证关闭重开应用后已完成的进度不会被清零。
         int m_todayReviewedBaseline = 0;
 
-        // ==========================================
-        // 2. 初始化流水线
-        // ==========================================
         void initializeControllers();
         void initializeViews();
 
         /**
-         * @brief 全局神经枢纽：负责将 View 和各个子 Controller 的信号/槽缝合在一起
+         * @brief Connects view signals to controller actions.
          */
         void setupGlobalConnections();
 
@@ -93,6 +90,7 @@ namespace MindPalace::Controller {
 
     private:
         void refreshDeckList();
+        bool maybeShowReviewReminder(QWidget* parentForDialog = nullptr);
     };
 
 

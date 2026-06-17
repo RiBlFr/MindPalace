@@ -1,6 +1,4 @@
-/* =======================================================
-   【经典扁平模式】 Theme Classic
-======================================================= */
+/* Theme Classic */
 /* 1. 干净的纯白/浅灰底色 */
 #mainWindowRoot { background-color: #f7f8fb; }
 QWidget[panel="side"] { background-color: #f3f6fa; }
@@ -49,6 +47,20 @@ QPushButton#btnAddDeck {
 }
 QPushButton#btnAddDeck:hover {
     background-color: #487aaa;
+}
+
+QPushButton#btnCheckIn {
+    background-color: #5688b8;
+    color: #ffffff;
+    border-radius: 8px;
+    font-weight: 700;
+}
+QPushButton#btnCheckIn:hover {
+    background-color: #487aaa;
+}
+QPushButton#btnCheckIn:disabled {
+    background-color: #32c67a;
+    color: #ffffff;
 }
 
 QPushButton#btnCalendar {

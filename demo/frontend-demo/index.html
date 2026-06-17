@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MindPalace Frontend Demo</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app-shell" aria-live="polite">
+    <div class="aurora-grid" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <section class="screen is-active" id="screen-home" data-screen="home">
+      <header class="topbar">
+        <div class="brand-mark">记</div>
+        <div>
+          <p class="eyebrow">MindPalace</p>
+          <h1>记忆殿堂</h1>
+        </div>
+      </header>
+
+      <div class="hero-stage">
+        <button class="utility-button utility-check" type="button" data-feedback>签到</button>
+        <button class="utility-button utility-calendar" type="button" data-feedback>日历</button>
+        <button class="utility-button utility-settings" type="button" data-feedback>设置</button>
+        <button class="utility-button utility-edit" type="button" data-route="edit">编辑</button>
+
+        <div class="glass-core">
+          <p class="core-kicker">词组记忆入口</p>
+          <h2>让词组像星座一样浮现</h2>
+          <button class="primary-action" type="button" data-route="review">开始</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-review" data-screen="review">
+      <header class="view-header">
+        <button class="ghost-button" type="button" data-route="home">返回</button>
+        <div>
+          <p class="eyebrow">Review Space</p>
+          <h2>词组复习</h2>
+        </div>
+      </header>
+
+      <div class="floating-deck" aria-label="已有词组">
+        <article class="phrase-card card-a">
+          <span>semantic drift</span>
+          <small>语义漂移</small>
+        </article>
+        <article class="phrase-card card-b">
+          <span>memory palace</span>
+          <small>记忆宫殿</small>
+        </article>
+        <article class="phrase-card card-c">
+          <span>active recall</span>
+          <small>主动回忆</small>
+        </article>
+        <article class="phrase-card card-d">
+          <span>spaced repetition</span>
+          <small>间隔重复</small>
+        </article>
+        <article class="phrase-card card-e">
+          <span>context cue</span>
+          <small>语境线索</small>
+        </article>
+        <article class="phrase-card card-f">
+          <span>chunking</span>
+          <small>组块化</small>
+        </article>
+      </div>
+
+      <div class="center-controls">
+        <button class="major-button" type="button" data-feedback>随机词组</button>
+        <button class="major-button secondary" type="button" data-feedback>选择词组</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-edit" data-screen="edit">
+      <header class="topbar">
+        <button class="ghost-button" type="button" data-route="home">返回</button>
+        <div>
+          <p class="eyebrow">Phrase Studio</p>
+          <h2>编辑词组</h2>
+        </div>
+      </header>
+
+      <div class="hero-stage edit-stage">
+        <button class="utility-button utility-check" type="button" data-feedback>签到</button>
+        <button class="utility-button utility-calendar" type="button" data-feedback>日历</button>
+        <button class="utility-button utility-settings" type="button" data-feedback>设置</button>
+        <button class="utility-button utility-edit is-current" type="button" data-feedback>编辑</button>
+
+        <div class="glass-core edit-core">
+          <p class="core-kicker">词组工作台</p>
+          <h2>整理你的专属词组库</h2>
+          <div class="dual-actions">
+            <button class="primary-action" type="button" data-feedback>创建词组</button>
+            <button class="primary-action muted" type="button" data-feedback>编辑词组</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

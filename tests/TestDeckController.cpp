@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QTemporaryDir>
 
+#include <utility>
+
 #include "controller/deckcontroller.h"
 #include "model/Deck.h"
 
@@ -16,6 +18,8 @@ private slots:
     void createDeck_emptyName_returnsFalse();
     void createDeck_duplicateName_returnsFalse();
     void createDeck_persistsFileToDisk();
+    void createDeckFromCards_success();
+    void createDeckFromCards_emptyCards_returnsFalse();
 
     void getDecks_emptyOnStart();
     void getDecks_returnsAllCreated();
@@ -74,6 +78,37 @@ void TestDeckController::createDeck_persistsFileToDisk() {
     const QString deckId = ctrl.getDecks()[0].deckId;
     const QString filePath = QDir(tmp.path()).filePath(deckId + ".json");
     QVERIFY(QFile::exists(filePath));
+}
+
+void TestDeckController::createDeckFromCards_success() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+
+    DeckController ctrl(tmp.path());
+    std::vector<std::pair<QString, QString>> cards = {
+        {"Question 1", "Answer 1"},
+        {"Question 2", "Answer 2"}
+    };
+
+    QVERIFY(ctrl.createDeckFromCards("Generated", cards));
+    QCOMPARE(ctrl.getDecks().size(), 1u);
+    QCOMPARE(ctrl.getDecks()[0].deckName, "Generated");
+    QCOMPARE(ctrl.getDecks()[0].cards.size(), 2u);
+    QCOMPARE(ctrl.getDecks()[0].cards[0]->front, "Question 1");
+}
+
+void TestDeckController::createDeckFromCards_emptyCards_returnsFalse() {
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+
+    DeckController ctrl(tmp.path());
+    std::vector<std::pair<QString, QString>> cards = {
+        {"", "Answer"},
+        {"Question", ""}
+    };
+
+    QVERIFY(!ctrl.createDeckFromCards("Empty Generated", cards));
+    QCOMPARE(ctrl.getDecks().size(), 0u);
 }
 
 // -----------------------------------------------------------------------

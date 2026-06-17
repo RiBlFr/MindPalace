@@ -11,7 +11,7 @@
 
 namespace MindPalace::Controller {
 
-// 【改造】继承自 QObject，赋予该类发送和接收信号的超能力
+// QObject is used so the review state machine can notify the UI layer.
 class ReviewController : public QObject {
     Q_OBJECT
 
@@ -29,16 +29,15 @@ public:
         Easy = 5
     };
 
-    // 【改造】符合 Qt 标准规范的构造函数，带有可选的 parent 指针用于自动内存管理
     explicit ReviewController(QObject* parent = nullptr);
 
     /**
      * @brief 开始一次牌组复习，并筛选出今日到期的卡片。
      * @param deck 待复习的牌组。复习过程中会直接修改其中的卡片状态。
      * @param deckFilePath 该牌组对应的 JSON 文件路径，用于评分后立即保存。
-     * @param forceReview 特权通道标志。为 true 时将无视算法，提取该牌组内所有卡片进入队列。
+     * @param forceReview 为 true 时忽略到期日期，复习该牌组内所有卡片。
      * @return 存在可复习卡片时返回 true；没有到期卡片或参数无效时返回 false。
-     * 成功进入提问态时，会立即触发 signal_showQuestion() 广播第一张卡片正面文本。
+     * 成功进入提问态时，会立即发出 signal_showQuestion()。
      * 注意：需要deckFilePath是因为想把deckcontroller 和 reviewcontroller分开
      * 可以从reviewcontroller.h得到filepath
      */
@@ -65,8 +64,8 @@ public:
      * @brief 提交当前卡片的复习反馈，更新 SM-2 参数并保存牌组。
      * @param feedback 用户选择的复习反馈。
      * @return 评分处理并保存成功时返回 true；保存失败或当前状态不可评分时返回 false。（此时会回滚card状态）
-     * 保存成功后若仍有下一张卡片，会切回提问态并触发 signal_showQuestion()；
-     * 若本次队列自然完成，会切入 FinishedState 并触发 signal_reviewFinished()，但保留 activeDeck 等会话上下文。
+     * 保存成功后若仍有下一张卡片，会切回提问态并发出 signal_showQuestion()；
+     * 若本次队列完成，会切入 FinishedState 并发出 signal_reviewFinished()。
      */
     bool submitFeedback(ReviewFeedback feedback);
 
@@ -86,31 +85,28 @@ public:
     int totalCount() const;
 
 signals:
-    // ==========================================
-    // 【新增区】状态机向外界（总指挥）广播的核心事件
-    // modified by zhy: 信号只表达状态机事件，不直接规定 View 层具体 UI 行为。
-    // ==========================================
+    // Signals describe state-machine events; the UI decides how to render them.
 
     /**
-     * @brief 当状态机切入“提问态”时触发。
+     * @brief 状态机切入“提问态”时发出。
      * 附带当前卡片的正面文字；外部协调者可据此驱动 View 渲染提问态。
      */
     void signal_showQuestion(const QString& frontText);
 
     /**
-     * @brief 当状态机切入“答案态”时触发。
+     * @brief 状态机切入“答案态”时发出。
      * 附带当前卡片的背面文字；外部协调者可据此驱动 View 渲染答案态。
      */
     void signal_showAnswer(const QString& backText);
 
     /**
-     * @brief 当复习队列被彻底清空或复习流程结束时触发。
+     * @brief 复习队列清空或复习流程结束时发出。
      * 外部协调者可据此驱动 View 渲染复习完成状态。
      */
     void signal_reviewFinished();
 
     /**
-     * @brief 当“连续选择简单”的连胜计数发生变化时触发。
+     * @brief “连续选择简单”的连胜计数发生变化时发出。
      * @param easyStreak 当前在本牌组会话中连续评定为 [熟悉] 的张数；
      * 任意一次非简单评分都会立刻清零。新会话开始时也会归零（携带 0 广播）。
      * 外部协调者可据此驱动 View 显示/隐藏“火热连胜”徽章并分档施加特效。
@@ -129,7 +125,7 @@ private:
 
     /**
      * @brief 构建复习队列
-     * @param forceReview 【新增】是否开启无视算法的强制备考模式
+     * @param forceReview 是否忽略到期日期，复习该牌组内全部卡片
      */
     void buildReviewQueue(bool forceReview = false);
     void clearQueue();

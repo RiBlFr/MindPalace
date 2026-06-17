@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/app_icon.png</file>
+        <file>pets/pet_002_idle.png</file>
 
         <file>styles/theme_classic.qss</file>
         <file>styles/theme_aurora.qss</file>
