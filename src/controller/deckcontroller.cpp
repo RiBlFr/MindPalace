@@ -71,6 +71,47 @@ bool DeckController::createDeck(const QString& name) {
     return true;
 }
 
+bool DeckController::createDeckFromCards(const QString& name,
+                                         const std::vector<std::pair<QString, QString>>& cards) {
+    const QString cleanedName = name.trimmed();
+    if (cleanedName.isEmpty()) {
+        qWarning() << "createDeckFromCards failed: deck name is empty after trimming.";
+        return false;
+    }
+
+    if (deckNameExists(cleanedName)) {
+        qWarning() << "createDeckFromCards failed: deck name already exists:" << cleanedName;
+        return false;
+    }
+
+    Model::Deck deck(cleanedName);
+    deck.deckId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+    for (const auto& card : cards) {
+        const QString front = card.first.trimmed();
+        const QString back = card.second.trimmed();
+        if (front.isEmpty() || back.isEmpty()) {
+            continue;
+        }
+        deck.addCard(std::make_unique<Model::Card>(front, back));
+    }
+
+    if (deck.cards.empty()) {
+        qWarning() << "createDeckFromCards failed: no valid card pairs.";
+        return false;
+    }
+
+    Service::StorageError error;
+    if (!Service::StorageManager::saveDeck(deck, deckFilePath(deck.deckId), &error)) {
+        qWarning() << "createDeckFromCards failed: unable to save deck file:" << error.message;
+        return false;
+    }
+
+    decks.push_back(std::move(deck));
+    emit signal_deckListChanged();
+    return true;
+}
+
 bool DeckController::deleteDeck(const QString& deckName) {
     const QString cleanedName = deckName.trimmed();
     if (cleanedName.isEmpty()) {
@@ -200,7 +241,6 @@ bool DeckController::addCardToDeck(const QString& deckName, const QString& front
         return false;
     }
 
-    // 1. 在内存中找到目标牌组
     Model::Deck* deck = findDeckByName(cleanedName);
     if (!deck) {
         qWarning() << "addCardToDeck failed: deck does not exist:" << cleanedName;
@@ -216,16 +256,13 @@ bool DeckController::addCardToDeck(const QString& deckName, const QString& front
         qWarning() << "addCardToDeck notice: card front or back is empty.";
     }
 
-    // 2. Card 构造函数负责初始化正反面文本和 SM-2 初始状态。
     auto newCard = std::make_unique<Model::Card>(front, back);
 
-    // 3. 通过 Deck 的封装接口转移卡片所有权。
     deck->addCard(std::move(newCard));
 
-    // 4. 触发 StorageManager 进行持久化落盘
     Service::StorageError error;
     if (!Service::StorageManager::saveDeck(*deck, deckFilePath(deck->deckId), &error)) {
-        // 如果落盘失败，必须进行内存回滚，保证内存与硬盘一致！
+        // Roll back the in-memory append if persistence fails.
         deck->cards.pop_back();
         qWarning() << "addCardToDeck failed: unable to save deck file:" << error.message;
         return false;
@@ -248,7 +285,6 @@ bool DeckController::deleteCardFromDeck(const QString& deckName, const QString& 
         return false;
     }
 
-    // 1. 找到目标牌组。删除卡片属于牌组内部数据变更，必须先定位到内存中的 Deck。
     Model::Deck* deck = findDeckByName(cleanedName);
     if (!deck) {
         qWarning() << "deleteCardFromDeck failed: deck does not exist:" << cleanedName;
@@ -270,7 +306,7 @@ bool DeckController::deleteCardFromDeck(const QString& deckName, const QString& 
         return false;
     }
 
-    // 2. 先从内存移除，再尝试落盘；若保存失败，必须插回原位置保持内存与磁盘一致。
+    // Remove in memory first, then restore the exact card position if save fails.
     const auto cardIndex = std::distance(deck->cards.begin(), cardIterator);
     auto removedCard = std::move(*cardIterator);
     deck->cards.erase(cardIterator);
@@ -450,11 +486,11 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
     return true;
 }
     DeckController::DeckStats DeckController::getDeckStats(const QString& deckName) const {
-    DeckStats stats; // 默认初始化，各项均为 0
+    DeckStats stats;
 
     const Model::Deck* deck = findDeckByName(deckName);
     if (!deck || deck->cards.empty()) {
-        return stats; // 如果牌组不存在或为空，.直接返回 0 数据
+        return stats;
     }
 
     stats.totalCards = static_cast<int>(deck->cards.size());
@@ -463,17 +499,14 @@ bool DeckController::importDeckFromFile(const QString& sourceFilePath) {
     for (const auto& cardPtr : deck->cards) {
         if (!cardPtr) continue;
 
-        // 1. 累计复习次数：将每张卡片的成功复习次数累加
         stats.totalReviews += cardPtr->repetitions;
 
-        // 2. 核心算法：判断是否为“已掌握”卡片 (Mature Card)
-        // 规则：复习间隔 >= 21 天，或连续成功复习 >= 4 次
+        // Treat cards as mastered after a long interval or several successful reviews.
         if (cardPtr->interval >= 21.0f || cardPtr->repetitions >= 4) {
             masteredCount++;
         }
     }
 
-    // 3. 计算掌握率 (防零除保护已在顶部处理)
     stats.masteryRate = static_cast<double>(masteredCount) / stats.totalCards;
 
     return stats;

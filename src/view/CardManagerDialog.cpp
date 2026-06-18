@@ -3,9 +3,11 @@
 #include <QAction>
 #include <QColor>
 #include <QDebug>
+#include <QEvent>
 #include <QFile>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -28,6 +30,18 @@ CardManagerDialog::CardManagerDialog(const QString& deckName,
     buildUi(cards);
 }
 
+bool CardManagerDialog::eventFilter(QObject* watched, QEvent* event) {
+    if ((watched == m_addFront || watched == m_addBack) && event->type() == QEvent::KeyPress) {
+        auto *keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+            handleAddClicked();
+            return true;
+        }
+    }
+
+    return QDialog::eventFilter(watched, event);
+}
+
 void CardManagerDialog::applyStyleSheet() {
     QFile qssFile(":/styles/CardManagerDialog.qss");
     if (!qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -42,7 +56,6 @@ void CardManagerDialog::buildUi(const std::vector<CardDisplayInfo>& cards) {
     root->setContentsMargins(24, 20, 24, 18);
     root->setSpacing(14);
 
-    // ---- Header ----
     auto *header = new QVBoxLayout;
     header->setSpacing(2);
     auto *title = new QLabel(m_deckName, this);
@@ -53,22 +66,24 @@ void CardManagerDialog::buildUi(const std::vector<CardDisplayInfo>& cards) {
     header->addWidget(m_subtitle);
     root->addLayout(header);
 
-    // ---- Inline add form (always visible at the top) ----
     auto *addRow = new QHBoxLayout;
     addRow->setSpacing(8);
 
     m_addFront = new QLineEdit(this);
     m_addFront->setObjectName("addInput");
+    m_addFront->installEventFilter(this);
     m_addFront->setPlaceholderText(tr("正面 (问题)"));
 
     m_addBack = new QLineEdit(this);
     m_addBack->setObjectName("addInput");
+    m_addBack->installEventFilter(this);
     m_addBack->setPlaceholderText(tr("背面 (答案)"));
 
     auto *addBtn = new QPushButton(tr("+ 添加"), this);
     addBtn->setObjectName("addCardBtn");
     addBtn->setCursor(Qt::PointingHandCursor);
-    addBtn->setDefault(true);
+    addBtn->setDefault(false);
+    addBtn->setAutoDefault(false);
 
     addRow->addWidget(m_addFront, 1);
     addRow->addWidget(m_addBack, 1);
@@ -76,11 +91,9 @@ void CardManagerDialog::buildUi(const std::vector<CardDisplayInfo>& cards) {
     root->addLayout(addRow);
 
     connect(addBtn, &QPushButton::clicked, this, &CardManagerDialog::handleAddClicked);
-    // Enter 键在任一输入框中也触发添加
-    connect(m_addFront, &QLineEdit::returnPressed, this, &CardManagerDialog::handleAddClicked);
-    connect(m_addBack,  &QLineEdit::returnPressed, this, &CardManagerDialog::handleAddClicked);
+    // Enter in either input commits the add form.
 
-    // ---- Table (always rendered, even when empty, so add 后能立即看到行) ----
+    // Always render the table so newly added rows have a stable destination.
     m_table = new QTableWidget(0, 3, this);
     m_table->setObjectName("cardTable");
     m_table->setHorizontalHeaderLabels({tr("正面"), tr("背面"), tr("操作")});
@@ -109,12 +122,12 @@ void CardManagerDialog::buildUi(const std::vector<CardDisplayInfo>& cards) {
 
     refreshSubtitle();
 
-    // ---- Footer ----
     auto *footer = new QHBoxLayout;
     footer->addStretch();
     auto *closeBtn = new QPushButton(tr("关闭"), this);
     closeBtn->setObjectName("closeBtn");
     closeBtn->setCursor(Qt::PointingHandCursor);
+    closeBtn->setAutoDefault(false);
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
     footer->addWidget(closeBtn);
     root->addLayout(footer);
@@ -128,7 +141,7 @@ void CardManagerDialog::appendCardRow(const CardDisplayInfo& card, bool pendingS
     auto *backItem  = new QTableWidgetItem(card.back);
     frontItem->setToolTip(card.front);
     backItem->setToolTip(card.back);
-    // 把 cardId 绑在 0 列 item 的 UserRole 上，方便右键菜单按行检索
+    // Store cardId on the first column item for row-level actions.
     frontItem->setData(Qt::UserRole, card.id);
     m_table->setItem(row, 0, frontItem);
     m_table->setItem(row, 1, backItem);
@@ -141,13 +154,14 @@ void CardManagerDialog::appendCardRow(const CardDisplayInfo& card, bool pendingS
     auto *delBtn = new QPushButton(tr("删除"), wrap);
     delBtn->setObjectName("rowDeleteBtn");
     delBtn->setCursor(Qt::PointingHandCursor);
+    delBtn->setAutoDefault(false);
     delBtn->setFixedSize(72, 30);
     wrapLayout->addStretch(1);
     wrapLayout->addWidget(delBtn);
     wrapLayout->addStretch(1);
 
     if (pendingSave) {
-        // 本次会话内新加的卡，ID 尚未从后端回传；先禁用删除按钮，待用户重新打开该对话框
+        // Newly added rows do not have persisted ids until the dialog is reopened.
         delBtn->setEnabled(false);
         delBtn->setToolTip(tr("关闭并重新打开本对话框后即可删除该卡片"));
         frontItem->setForeground(QColor("#9ca3af"));
@@ -173,7 +187,7 @@ void CardManagerDialog::handleAddClicked() {
 
     emit signal_requestAddCard(m_deckName, front, back);
 
-    // 前端即时反馈：立即在表格末尾追加一行（pendingSave 标记，禁用删除按钮）
+    // Show the row immediately; it becomes fully editable after reopening.
     appendCardRow({/*id=*/QString(), front, back}, /*pendingSave=*/true);
     refreshSubtitle();
 
@@ -218,7 +232,7 @@ void CardManagerDialog::showTableContextMenu(const QPoint& pos) {
     if (!idx.isValid()) return;
     const int row = idx.row();
 
-    // 未落盘的新卡（pendingSave）UserRole 是空字符串，不允许编辑
+    // Rows without persisted ids cannot be edited yet.
     auto *frontItem = m_table->item(row, 0);
     if (!frontItem) return;
     const QString cardId = frontItem->data(Qt::UserRole).toString();
@@ -255,7 +269,7 @@ void CardManagerDialog::editCardAtRow(int row) {
     const QString newBack  = edited->second;
     if (newFront == frontItem->text() && newBack == backItem->text()) return;
 
-    // 前端即时反馈：先把表格行更新到新文本（与落盘并行）
+    // Update the visible row immediately; persistence is handled by the controller.
     frontItem->setText(newFront);
     backItem->setText(newBack);
     frontItem->setToolTip(newFront);

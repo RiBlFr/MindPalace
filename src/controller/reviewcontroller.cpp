@@ -1,4 +1,4 @@
-#include "reviewcontroller.h"
+﻿#include "reviewcontroller.h"
 #include "service/sm2engine.h"
 #include "service/storagemanager.h"
 #include <QSettings>
@@ -9,9 +9,7 @@
 
 namespace MindPalace::Controller {
 
-// =========================================================================
-// 1. 构造与只读状态查询
-// =========================================================================
+// State access
 
 ReviewController::ReviewController(QObject* parent)
     : QObject(parent) {
@@ -22,8 +20,7 @@ ReviewController::ReviewState ReviewController::currentState() const {
 }
 
 Model::Card* ReviewController::currentCard() const {
-    // 架构安全规范：FinishedState 代表复习状态机已经停止对外暴露卡片，
-    // 即使内部队列残留数据，也不能让 View 层继续读取旧卡片。
+    // Finished sessions should not expose a stale card to the view.
     if (state == ReviewState::FinishedState || reviewQueue.empty()) {
         return nullptr;
     }
@@ -31,9 +28,7 @@ Model::Card* ReviewController::currentCard() const {
     return reviewQueue.front();
 }
 
-// =========================================================================
-// 2. 复习会话启动与队列构建
-// =========================================================================
+// Review session
 
 bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePath, bool forceReview) {
     // 参数无效：没有有效牌组时不能启动复习会话。
@@ -59,7 +54,6 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
     activeDeck = deck;
     activeDeckFilePath = deckFilePath;
 
-    // 【修改点】向下传递强制复习指令
     buildReviewQueue(forceReview);
 
     totalReviewCount = static_cast<int>(reviewQueue.size());
@@ -81,7 +75,7 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
         return;
     }
 
-    // 1. 缓冲池：使用 vector 收集所有符合条件的卡片指针
+    // Collect candidates in a vector first so optional shuffling is simple.
     std::vector<Model::Card*> tempCards;
 
     for (const auto& card : activeDeck->cards) {
@@ -90,21 +84,17 @@ bool ReviewController::startReview(Model::Deck* deck, const QString& deckFilePat
         }
     }
 
-    // 2. 读取用户的全局偏好设置 (默认 false，即顺序复习)
+    // Default to the deck's stored order unless the user enabled shuffling.
     QSettings settings("MindPalace", "Settings");
     bool isRandomShuffle = settings.value("shuffleReview", false).toBool();
 
-    // 3. 核心洗牌算法：如果开启了随机，则在 vector 内进行高效原地乱序
     if (isRandomShuffle) {
-        // 使用硬件级随机数种子初始化梅森旋转算法 (Mersenne Twister)
         std::random_device rd;
         std::mt19937 generator(rd());
-
-        // 调用标准库算法，时间复杂度 O(N)
         std::shuffle(tempCards.begin(), tempCards.end(), generator);
     }
 
-    // 4. 将处理好的卡片依次推入真正的复习队列
+    // Queue keeps the rest of the state machine simple.
     for (Model::Card* c : tempCards) {
         reviewQueue.push(c);
     }
@@ -162,7 +152,7 @@ bool ReviewController::submitFeedback(ReviewFeedback feedback) {
         return false;
     }
 
-    // 核心一致性保护：SM2Engine 会直接改写卡片，必须先留快照，确保落盘失败时可以完整回滚。
+    // SM2Engine mutates the card in place; keep a copy so save failures can roll back.
     const Model::Card backup = *card;
     Service::SM2Engine::calculate(card, static_cast<int>(feedback));
 
@@ -193,9 +183,7 @@ bool ReviewController::submitFeedback(ReviewFeedback feedback) {
     return true;
 }
 
-// =========================================================================
-// 3. 复习会话收尾与进度查询
-// =========================================================================
+// Session cleanup
 
 void ReviewController::finishReview() {
     const bool hadActiveSession =

@@ -1,4 +1,4 @@
-#include "ScheduleCalendarDialog.h"
+﻿#include "ScheduleCalendarDialog.h"
 #include <QVBoxLayout>
 #include <QMenu>
 #include <QInputDialog>
@@ -7,18 +7,51 @@
 #include <QMetaObject>
 #include <QLabel>
 #include <QFile>
+#include <QTextCharFormat>
+
+#ifdef Q_OS_WIN
+#include <dwmapi.h>
+#include <windows.h>
+#endif
 
 #include "StyledDialogs.h"
 
-// =========================================================
-// CustomCalendarWidget 实现
-// =========================================================
+namespace {
+#ifdef Q_OS_WIN
+void applyCalendarWindowFrame(QWidget *widget, bool dark) {
+    if (!widget) return;
+
+    const HWND hwnd = reinterpret_cast<HWND>(widget->winId());
+    const BOOL darkMode = dark ? TRUE : FALSE;
+    DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
+
+    const COLORREF caption = dark ? RGB(5, 9, 16) : RGB(247, 248, 251);
+    const COLORREF text = dark ? RGB(232, 238, 248) : RGB(31, 41, 55);
+    DwmSetWindowAttribute(hwnd, 35, &caption, sizeof(caption));
+    DwmSetWindowAttribute(hwnd, 36, &text, sizeof(text));
+}
+#else
+void applyCalendarWindowFrame(QWidget*, bool) {}
+#endif
+}
+
+// Calendar cell painting
 
 CustomCalendarWidget::CustomCalendarWidget(QWidget *parent) : QCalendarWidget(parent) {}
 
 void CustomCalendarWidget::setScheduleData(const QMap<QDate, QStringList>& data) {
     m_scheduleData = data;
     updateCells(); // 强制整个日历控件重新绘制一遍
+}
+
+void CustomCalendarWidget::setCheckInDates(const QSet<QDate>& dates) {
+    m_checkInDates = dates;
+    updateCells();
+}
+
+void CustomCalendarWidget::setDarkMode(bool darkMode) {
+    m_darkMode = darkMode;
+    updateCells();
 }
 
 void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const QDate date) const {
@@ -31,36 +64,88 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const
     const bool inCurrentMonth = (date.month() == monthShown() && date.year() == yearShown());
     const bool isWeekend      = (date.dayOfWeek() == Qt::Saturday || date.dayOfWeek() == Qt::Sunday);
     const bool hasSchedule    = m_scheduleData.contains(date) && !m_scheduleData[date].isEmpty();
+    const bool isCheckedIn    = m_checkInDates.contains(date);
 
-    const QRect cellRect = rect.adjusted(3, 3, -3, -3);
+    const QRect cellRect = rect.adjusted(m_darkMode ? 4 : 3, m_darkMode ? 4 : 3,
+                                         m_darkMode ? -4 : -3, m_darkMode ? -4 : -3);
 
     // 1. 背景：选中填充实色，今天描边
     if (isSelected) {
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(QColor("#5688b8"));
-        painter->drawRoundedRect(cellRect, 8, 8);
+        if (m_darkMode) {
+            painter->setPen(QPen(QColor("#2a95ff"), 1.3));
+            painter->setBrush(QColor(14, 45, 88, 205));
+            painter->drawRoundedRect(cellRect, 8, 8);
+            painter->setPen(QPen(QColor(42, 149, 255, 70), 6));
+            painter->drawRoundedRect(cellRect.adjusted(2, 2, -2, -2), 8, 8);
+        } else {
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor("#5688b8"));
+            painter->drawRoundedRect(cellRect, 8, 8);
+        }
     } else if (isToday) {
-        painter->setPen(QPen(QColor("#5688b8"), 1.4));
+        painter->setPen(QPen(m_darkMode ? QColor("#2a95ff") : QColor("#5688b8"), 1.4));
         painter->setBrush(Qt::NoBrush);
         painter->drawRoundedRect(cellRect, 8, 8);
     }
 
     // 2. 日期数字
     QColor dayColor;
-    if (isSelected)            dayColor = QColor("#ffffff");
-    else if (!inCurrentMonth)  dayColor = QColor("#cbd2d9");
-    else if (isWeekend)        dayColor = QColor("#cd7373");
-    else                       dayColor = QColor("#334155");
+    if (m_darkMode) {
+        if (isSelected)            dayColor = QColor("#ffffff");
+        else if (!inCurrentMonth)  dayColor = QColor("#626b79");
+        else if (isWeekend)        dayColor = QColor("#ff5a60");
+        else                       dayColor = QColor("#e8eef8");
+    } else {
+        if (isSelected)            dayColor = QColor("#ffffff");
+        else if (!inCurrentMonth)  dayColor = QColor("#cbd2d9");
+        else if (isWeekend)        dayColor = QColor("#cd7373");
+        else                       dayColor = QColor("#334155");
+    }
 
     QFont dayFont = painter->font();
-    dayFont.setPointSize(10);
+    dayFont.setPointSize(m_darkMode ? 11 : 10);
     dayFont.setBold(isToday || isSelected);
     painter->setFont(dayFont);
     painter->setPen(dayColor);
 
-    QRect numberRect = rect;
-    numberRect.setBottom(rect.top() + static_cast<int>(rect.height() * 0.6));
+    const QRect numberRect(rect.left(), rect.top() + 6, rect.width(), 26);
     painter->drawText(numberRect, Qt::AlignCenter, QString::number(date.day()));
+
+    if (isCheckedIn && inCurrentMonth) {
+        QFont badgeFont = painter->font();
+        badgeFont.setPointSize(7);
+        badgeFont.setBold(true);
+        painter->setFont(badgeFont);
+
+        const int badgeWidth = qMin(rect.width() - 14, m_darkMode ? 72 : 58);
+        const int badgeHeight = 18;
+        const int badgeX = rect.center().x() - badgeWidth / 2;
+        const int preferredBadgeY = rect.top() + 42;
+        const int scheduleBadgeY = rect.bottom() - 19;
+        const int badgeY = qMin(preferredBadgeY, scheduleBadgeY - badgeHeight - 8);
+        const QRect badgeRect(badgeX, badgeY, badgeWidth, badgeHeight);
+
+        painter->setPen(m_darkMode ? QPen(QColor("#30f29b"), 1.0) : QPen(Qt::NoPen));
+        painter->setBrush(isSelected ? QColor("#16c879") : QColor("#32c67a"));
+        painter->drawRoundedRect(badgeRect, badgeHeight / 2, badgeHeight / 2);
+
+        const QRect checkRect(badgeRect.left() + 6, badgeRect.top() + 4, 10, 10);
+        painter->setBrush(QColor(255, 255, 255, 215));
+        painter->drawEllipse(checkRect);
+
+        QPen checkPen(isSelected ? QColor("#2ab96f") : QColor("#23a968"),
+                      1.7, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+        painter->setPen(checkPen);
+        painter->drawLine(checkRect.left() + 3, checkRect.center().y(),
+                          checkRect.left() + 5, checkRect.bottom() - 3);
+        painter->drawLine(checkRect.left() + 5, checkRect.bottom() - 3,
+                          checkRect.right() - 2, checkRect.top() + 3);
+
+        painter->setPen(QColor(m_darkMode ? "#d9ffe9" : "#ffffff"));
+        painter->drawText(badgeRect.adjusted(18, 0, -5, 0),
+                          Qt::AlignVCenter | Qt::AlignLeft,
+                          QStringLiteral("已签到"));
+    }
 
     // 3. 排期药丸徽章
     if (hasSchedule) {
@@ -75,10 +160,14 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const
         painter->setFont(badgeFont);
 
         const QRect badgeRect(rect.left() + 5, rect.bottom() - 19, rect.width() - 10, 16);
-        const QColor badgeBg   = isSelected ? QColor(255, 255, 255, 70) : QColor("#e8eef5");
-        const QColor badgeText = isSelected ? QColor("#ffffff")          : QColor("#487aaa");
+        const QColor badgeBg   = m_darkMode
+                ? QColor(23, 64, 113, isSelected ? 165 : 130)
+                : (isSelected ? QColor(255, 255, 255, 70) : QColor("#e8eef5"));
+        const QColor badgeText = m_darkMode
+                ? QColor("#bfe4ff")
+                : (isSelected ? QColor("#ffffff") : QColor("#487aaa"));
 
-        painter->setPen(Qt::NoPen);
+        painter->setPen(m_darkMode ? QPen(QColor("#4aa3ff"), 1.0) : QPen(Qt::NoPen));
         painter->setBrush(badgeBg);
         painter->drawRoundedRect(badgeRect, 8, 8);
 
@@ -91,16 +180,18 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const
     painter->restore();
 }
 
-// =========================================================
-// ScheduleCalendarDialog 实现
-// =========================================================
+// Dialog setup
 
 ScheduleCalendarDialog::ScheduleCalendarDialog(const QStringList& availableDecks, QWidget *parent)
     : QDialog(parent), m_availableDecks(availableDecks) 
 {
     setWindowTitle(tr("复习计划看板"));
+    const bool darkMode = parent && parent->property("frostedCard").toBool();
+    applyCalendarWindowFrame(this, darkMode);
     setObjectName("scheduleCalendar");
-    resize(820, 660);
+    setProperty("theme", darkMode ? "dark" : "light");
+    resize(darkMode ? QSize(1120, 760) : QSize(820, 660));
+    setMinimumSize(darkMode ? QSize(920, 640) : QSize(760, 560));
 
     // 加载美化样式表
     QFile qssFile(":/styles/Calendar.qss");
@@ -126,11 +217,26 @@ ScheduleCalendarDialog::ScheduleCalendarDialog(const QStringList& availableDecks
 
     m_calendar = new CustomCalendarWidget(this);
     m_calendar->setObjectName("calendarView");
+    m_calendar->setProperty("theme", darkMode ? "dark" : "light");
+    m_calendar->setDarkMode(darkMode);
     m_calendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
     m_calendar->setHorizontalHeaderFormat(QCalendarWidget::ShortDayNames);
     m_calendar->setFirstDayOfWeek(Qt::Monday);
     m_calendar->setGridVisible(false);
     m_calendar->setNavigationBarVisible(true);
+
+    if (darkMode) {
+        QTextCharFormat weekdayFormat;
+        weekdayFormat.setForeground(QBrush(QColor("#dce6f5")));
+        weekdayFormat.setFontWeight(QFont::DemiBold);
+        QTextCharFormat weekendFormat = weekdayFormat;
+        weekendFormat.setForeground(QBrush(QColor("#ff454b")));
+        for (int day = Qt::Monday; day <= Qt::Friday; ++day) {
+            m_calendar->setWeekdayTextFormat(static_cast<Qt::DayOfWeek>(day), weekdayFormat);
+        }
+        m_calendar->setWeekdayTextFormat(Qt::Saturday, weekendFormat);
+        m_calendar->setWeekdayTextFormat(Qt::Sunday, weekendFormat);
+    }
 
     // 开启自定义右键菜单支持
     m_calendar->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -149,9 +255,12 @@ ScheduleCalendarDialog::ScheduleCalendarDialog(const QStringList& availableDecks
 
 void ScheduleCalendarDialog::refreshCalendarData() {
     QMap<QDate, QStringList> data;
+    QSet<QDate> checkInDates;
     // 呼叫主界面 -> 呼叫总控 -> 总控通过引用把 data 填满
     emit signal_requestCalendarData(m_calendar->yearShown(), m_calendar->monthShown(), data);
+    emit signal_requestCheckInDates(m_calendar->yearShown(), m_calendar->monthShown(), checkInDates);
     m_calendar->setScheduleData(data); // 喂给底层绘图组件
+    m_calendar->setCheckInDates(checkInDates);
 }
 
 void ScheduleCalendarDialog::onCustomContextMenuRequested(const QPoint &pos) {

@@ -1,0 +1,98 @@
+QDialog#deckPreviewDialog {
+    background-color: rgba(255, 255, 255, 248);
+    border: 1px solid #e3e8ef;
+    border-radius: 14px;
+}
+
+QLabel#previewTitle {
+    color: #1b2b43;
+    font-size: 27px;
+    font-weight: 900;
+}
+
+QLabel#previewSubtitle,
+QLabel#previewHint {
+    color: #65758c;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QLabel#previewChip {
+    color: #1b2b43;
+    background-color: #f8fafc;
+    border: 1px solid #d7dde5;
+    border-radius: 6px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QFrame#previewScrollShell {
+    background-color: #ffffff;
+    border: 1px solid #d9e0e8;
+    border-radius: 18px;
+}
+
+QScrollArea#previewScrollArea,
+QWidget#previewGridHost {
+    background: transparent;
+    border: none;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 11px;
+    margin: 0;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background: #888888;
+    min-height: 86px;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+    border: none;
+    background: transparent;
+}
+
+QPushButton#previewSecondary,
+QPushButton#previewPrimary,
+QPushButton#previewAdd,
+QPushButton#previewDelete {
+    border-radius: 9px;
+    font-size: 17px;
+    font-weight: 900;
+}
+
+QPushButton#previewSecondary {
+    color: #111827;
+    background-color: #ffffff;
+    border: 1px solid #d7dde5;
+}
+
+QPushButton#previewAdd {
+    color: #16a34a;
+    background-color: #ffffff;
+    border: 1px solid #22c55e;
+}
+
+QPushButton#previewDelete {
+    color: #ef4444;
+    background-color: #ffffff;
+    border: 1px solid #ef4444;
+}
+
+QPushButton#previewDelete:disabled {
+    color: #fca5a5;
+    border-color: #fca5a5;
+}
+
+QPushButton#previewPrimary {
+    color: #ffffff;
+    background-color: #5688b8;
+    border: 1px solid #5688b8;
+}

@@ -4,18 +4,17 @@
 #include <QWidget>
 #include <vector>
 #include <QStringList>
-#include <QVariantAnimation> // 引入动画引擎
+#include <QVariantAnimation>
 
 class WeeklyChartWidget : public QWidget {
     Q_OBJECT
 public:
     explicit WeeklyChartWidget(QWidget *parent = nullptr);
 
-    // 接收后端传来的 7 天数据和对应的日期标签（如 "周一", "周二"）
+    // Seven values plus matching day labels.
     void setData(const std::vector<int>& data, const QStringList& labels);
 
 protected:
-    // 核心绘制逻辑
     void paintEvent(QPaintEvent *event) override;
 
 private:
@@ -23,7 +22,6 @@ private:
     std::vector<int> m_oldData;
     QStringList m_labels;
 
-    // 动画引擎与进度变量
     QVariantAnimation *m_animation;
     qreal m_animProgress;
 };

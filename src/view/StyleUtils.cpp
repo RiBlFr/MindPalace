@@ -6,10 +6,9 @@
 namespace Theme {
     extern const QColor WindowBg(0xf7f8fb);
 
-    // 注入 Alpha 通道（透明度）。
-    // 将原本实心的背景改为半透明。255是完全不透明，我们使用 150 和 180 营造通透感。
+    // Shared colors for custom painting and fallback inline styles.
     extern const QColor SideBg(243, 246, 250, 150);
-    extern const QColor Surface(255, 255, 255, 180);
+    extern const QColor Surface(13, 22, 34, 218);
 
     extern const QColor Text(0x1f2937);
     extern const QColor MutedText(0x64748b);
@@ -20,7 +19,7 @@ namespace Theme {
 
 void setBackground(QWidget *widget, const QColor &color) {
     if (color.alpha() < 255) {
-        // 【关键修复】动态生成唯一 ID，确保样式绝对隔离，保护按钮原色！
+        // Scope the inline background style to this widget only.
         if (widget->objectName().isEmpty()) {
             widget->setObjectName(QString("transBg_%1").arg(reinterpret_cast<quintptr>(widget)));
         }
@@ -68,12 +67,9 @@ void setLabelStyle(QLabel *label, int pointSize, QFont::Weight weight, const QCo
 
 void addSoftShadow(QWidget *widget) {
     auto *shadow = new QGraphicsDropShadowEffect(widget);
-    // 1. 将 BlurRadius 提升到惊人的 60，让阴影边缘彻底虚化
-    shadow->setBlurRadius(60);
-    // 2. 将垂直偏移量加大到 20，营造强烈的悬浮高度感
-    shadow->setOffset(0, 20);
-    // 3. 极其关键：不要用纯黑！使用一种偏紫蓝色的极低透明度颜色，呼应你的渐变背景
-    shadow->setColor(QColor(60, 70, 110, 28));
+    shadow->setBlurRadius(36);
+    shadow->setOffset(0, 14);
+    shadow->setColor(QColor(0, 0, 0, 120));
     widget->setGraphicsEffect(shadow);
 }
 

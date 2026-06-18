@@ -2,12 +2,12 @@
 #define MINDPALACE_STORAGEMANAGER_H
 
 #include "model/Deck.h"
+#include <QDate>
+#include <QSet>
 #include <QString>
 
-//debug进度：测试了1)能够实现牌堆里面有多张牌的情况
-
 namespace MindPalace::Service {
-//定义的储存错误类型，用于在写入和读出崩溃时返回出错的原因
+// Error categories used by deck load/save operations.
 
     enum class StorageErrorType {
         None,
@@ -18,7 +18,7 @@ namespace MindPalace::Service {
         InvalidJsonRoot,
         ReplaceFailed
     };
-//在出错的时候可以利用此类反馈出错的原因，位置，信息
+// Optional detail returned to callers when storage work fails.
     struct StorageError {
         StorageErrorType type = StorageErrorType::None;
         QString context;
@@ -30,14 +30,11 @@ namespace MindPalace::Service {
     class StorageManager {
     public:
         StorageManager() = delete;
-        //此类不能实例化，只能用StorageManager::saveDeck(...)来实现存入和读取
 
         static bool saveDeck(const Model::Deck& deck, const QString& filePath, StorageError* error);
-        //上面的函数是为了服务static bool saveDeck(const Model::Deck& deck, const QString& filePath);
-        //请使用static bool saveDeck(const Model::Deck& deck, const QString& filePath);用于数据写入文件
-
         static bool saveDeck(const Model::Deck& deck, const QString& filePath);
-        /**注意：使用此函数实现文件写入
+        /**
+         * @brief 保存牌组到 JSON 文件。
          *
          * @param filePath 写入文件名，一个.json文件
          * @param deck 给定的牌堆
@@ -45,16 +42,14 @@ namespace MindPalace::Service {
          */
         static bool loadDeck(const QString& filePath, Model::Deck& deck, StorageError* error);
         static bool loadDeck(const QString& filePath, Model::Deck& deck);
-        /**注意：使用此函数实现文件读取
+        /**
+        * @brief 从 JSON 文件读取牌组。
         *
         * @param filePath 读取文件名，一个.json文件名
         * @param deck 要赋值的牌堆
         * @return true:成功读取； false: 失败，并会打印原因
         */
 
-        // ==========================================
-        // 【新增】每日复习流水日志 API
-        // ==========================================
         /**
          * @brief 给今天的复习数量 +1，并自动落盘
          */
@@ -66,6 +61,21 @@ namespace MindPalace::Service {
          * @param outLabels 输出的 7 天横坐标标签 (例如 ["周四", "周五", ... "今"])
          */
         static void getWeeklyReviewData(std::vector<int>& outData, QStringList& outLabels);
+
+        /**
+         * @brief Mark today as signed in. Returns false when today was already signed in.
+         */
+        static bool markTodaySignedIn();
+
+        /**
+         * @brief Whether today already has a sign-in record.
+         */
+        static bool isTodaySignedIn();
+
+        /**
+         * @brief Read all signed-in days for a given month.
+         */
+        static QSet<QDate> getMonthlyCheckInDates(int year, int month);
     };
 
 } // namespace MindPalace::Service

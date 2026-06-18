@@ -34,7 +34,6 @@ namespace MindPalace::Model {
         json["deckName"] = deckName;
         json["deckId"] = deckId;
 
-        // 1. 序列化卡片数组
         QJsonArray cardsArray;
         for (const auto& cardPtr : cards) {
             if (cardPtr) {
@@ -43,12 +42,8 @@ namespace MindPalace::Model {
         }
         json["cards"] = cardsArray;
 
-        // ==========================================
-        // 【新增】2. 序列化日历计划表
-        // ==========================================
         QJsonObject scheduleObj;
         for (auto it = manualSchedule.constBegin(); it != manualSchedule.constEnd(); ++it) {
-            // 将 "2026-06-02" 这种日期字符串作为 JSON 的 Key，把指令数值作为 Value
             scheduleObj[it.key()] = it.value();
         }
         json["manualSchedule"] = scheduleObj;
@@ -62,7 +57,6 @@ namespace MindPalace::Model {
 
         cards.clear();
 
-        // 1. 反序列化卡片数组
         QJsonArray cardsArray = json["cards"].toArray();
         for (int i = 0; i < cardsArray.size(); ++i) {
             QJsonObject cardObj = cardsArray[i].toObject();
@@ -72,10 +66,7 @@ namespace MindPalace::Model {
             cards.push_back(std::move(card));
         }
 
-        // ==========================================
-        // 【新增】2. 反序列化日历计划表
-        // ==========================================
-        manualSchedule.clear(); // 清空旧数据以防内存残留
+        manualSchedule.clear();
         if (json.contains("manualSchedule")) {
             QJsonObject scheduleObj = json["manualSchedule"].toObject();
             for (const QString& key : scheduleObj.keys()) {

@@ -9,8 +9,8 @@ namespace Theme {
 /**
  * @brief 单个主题的定义。
  *
- * 新增主题只需三步：
- *   1. 在 res/styles/ 下新增一份 theme_xxx.qss；
+ * Adding a theme requires:
+ *   1. 在 res/styles/ 下添加一份 theme_xxx.qss；
  *   2. 在 res/resources.qrc 里注册该 qss；
  *   3. 在 ThemeRegistry.cpp 的 availableThemes() 列表里追加一条 ThemeDef。
  */

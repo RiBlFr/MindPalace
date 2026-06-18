@@ -5,30 +5,29 @@
 #include <QCalendarWidget>
 #include <QMap>
 #include <QDate>
+#include <QSet>
 #include <QStringList>
 
-// =========================================================
-// 1. 核心渲染类：接管画笔，在日历格子里绘制我们自己的业务数据
-// =========================================================
+// Calendar widget that paints review and sign-in markers inside date cells.
 class CustomCalendarWidget : public QCalendarWidget {
     Q_OBJECT
 public:
     explicit CustomCalendarWidget(QWidget *parent = nullptr);
 
-    // 接收外界传来的排期数据
     void setScheduleData(const QMap<QDate, QStringList>& data);
+    void setCheckInDates(const QSet<QDate>& dates);
+    void setDarkMode(bool darkMode);
 
 protected:
-    // 【核心重写】每次界面刷新时，Qt 会调用这个函数来画每一个日期格子
     void paintCell(QPainter *painter, const QRect &rect, const QDate date) const override;
 
 private:
     QMap<QDate, QStringList> m_scheduleData;
+    QSet<QDate> m_checkInDates;
+    bool m_darkMode = false;
 };
 
-// =========================================================
-// 2. 弹窗面板类：负责整体布局、右键菜单交互以及与外界通信
-// =========================================================
+// Dialog wrapper for calendar layout, context menus, and data requests.
 class ScheduleCalendarDialog : public QDialog {
     Q_OBJECT
 public:
@@ -36,9 +35,9 @@ public:
     explicit ScheduleCalendarDialog(const QStringList& availableDecks, QWidget *parent = nullptr);
 
     signals:
-        // 【高阶技巧】注意最后的 outData 是一个引用(&)！
-        // 这样当弹窗发出请求时，AppController 可以瞬间把数据填进这个变量里，实现同步获取。
+        // The output references are filled synchronously by AppController.
         void signal_requestCalendarData(int year, int month, QMap<QDate, QStringList>& outData);
+        void signal_requestCheckInDates(int year, int month, QSet<QDate>& outDates);
 
     // 向外抛出修改计划的请求
     void signal_requestUpdateSchedule(const QString& deckName, const QDate& date, int status);

@@ -1,11 +1,14 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/app_icon.png</file>
+        <file>pets/pet_002_idle.png</file>
 
         <file>styles/theme_classic.qss</file>
         <file>styles/theme_aurora.qss</file>
 
         <file>styles/CardManagerDialog.qss</file>
+        <file>styles/DeckPreviewDialog_classic.qss</file>
+        <file>styles/DeckPreviewDialog_dark.qss</file>
         <file>styles/SimpleDialog.qss</file>
         <file>styles/Calendar.qss</file>
 

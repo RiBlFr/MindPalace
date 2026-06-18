@@ -9,6 +9,8 @@
 #include <utility>
 #include <QDate>
 #include <QCoreApplication>
+#include <QDir>
+#include <QSet>
 
 namespace MindPalace::Service {
 
@@ -28,6 +30,32 @@ void setError(StorageError* error, StorageErrorType type, const QString& context
         error->message = message;
         error->offset = offset;
     }
+}
+
+QString appDataFilePath(const QString& fileName) {
+    const QString dataDirPath = QCoreApplication::applicationDirPath() + "/data";
+    QDir().mkpath(dataDirPath);
+    return QDir(dataDirPath).filePath(fileName);
+}
+
+QJsonObject readJsonObjectFile(const QString& filePath) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    return doc.isObject() ? doc.object() : QJsonObject{};
+}
+
+bool writeJsonObjectFile(const QString& filePath, const QJsonObject& object) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return false;
+    }
+
+    const QByteArray data = QJsonDocument(object).toJson(QJsonDocument::Indented);
+    return file.write(data) == data.size();
 }
 
 } // namespace
@@ -137,41 +165,24 @@ bool StorageManager::loadDeck(const QString& filePath, Model::Deck& deck) {
 }
     void StorageManager::incrementDailyReviewCount() {
     // 1. 确定文件路径 (与你存卡组的 data/ 目录平级)
-    QString logPath = QCoreApplication::applicationDirPath() + "/data/review_log.json";
-    QJsonObject logObj;
+    QString logPath = appDataFilePath("review_log.json");
+    QJsonObject logObj = readJsonObjectFile(logPath);
 
-    // 2. 如果文件存在，先读出旧账本
-    QFile file(logPath);
-    if (file.open(QIODevice::ReadOnly)) {
-        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-        logObj = doc.object();
-        file.close();
-    }
-
-    // 3. 给今天的数字 +1
+    // 2. 给今天的数字 +1
     QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
     int currentCount = logObj.value(todayStr).toInt(0);
     logObj[todayStr] = currentCount + 1;
 
-    // 4. 写回硬盘
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(QJsonDocument(logObj).toJson());
-        file.close();
-    }
+    // 3. 写回硬盘
+    writeJsonObjectFile(logPath, logObj);
 }
 
     void StorageManager::getWeeklyReviewData(std::vector<int>& outData, QStringList& outLabels) {
     outData.clear();
     outLabels.clear();
 
-    QString logPath = QCoreApplication::applicationDirPath() + "/data/review_log.json";
-    QJsonObject logObj;
-
-    QFile file(logPath);
-    if (file.open(QIODevice::ReadOnly)) {
-        logObj = QJsonDocument::fromJson(file.readAll()).object();
-        file.close();
-    }
+    QString logPath = appDataFilePath("review_log.json");
+    QJsonObject logObj = readJsonObjectFile(logPath);
 
     QDate today = QDate::currentDate();
 
@@ -192,5 +203,43 @@ bool StorageManager::loadDeck(const QString& filePath, Model::Deck& deck) {
             outLabels.append("周" + weekNames[d.dayOfWeek()]);
         }
     }
+}
+
+bool StorageManager::markTodaySignedIn() {
+    const QString logPath = appDataFilePath("checkin_log.json");
+    QJsonObject logObj = readJsonObjectFile(logPath);
+
+    const QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
+    if (logObj.value(todayStr).toBool(false)) {
+        return false;
+    }
+
+    logObj[todayStr] = true;
+    return writeJsonObjectFile(logPath, logObj);
+}
+
+bool StorageManager::isTodaySignedIn() {
+    const QString logPath = appDataFilePath("checkin_log.json");
+    const QJsonObject logObj = readJsonObjectFile(logPath);
+    return logObj.value(QDate::currentDate().toString("yyyy-MM-dd")).toBool(false);
+}
+
+QSet<QDate> StorageManager::getMonthlyCheckInDates(int year, int month) {
+    const QString logPath = appDataFilePath("checkin_log.json");
+    const QJsonObject logObj = readJsonObjectFile(logPath);
+    QSet<QDate> dates;
+
+    for (auto it = logObj.constBegin(); it != logObj.constEnd(); ++it) {
+        if (!it.value().toBool(false)) {
+            continue;
+        }
+
+        const QDate date = QDate::fromString(it.key(), "yyyy-MM-dd");
+        if (date.isValid() && date.year() == year && date.month() == month) {
+            dates.insert(date);
+        }
+    }
+
+    return dates;
 }
 } // namespace MindPalace::Service

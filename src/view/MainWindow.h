@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -6,6 +6,7 @@
 #include <vector>
 #include <QDate>
 #include <QMap>
+#include <QSet>
 #include <QStringList>
 
 #include "CardManagerDialog.h"
@@ -20,6 +21,7 @@ class QFrame;
 class QQuickWidget;
 class QStackedWidget;
 class QGraphicsDropShadowEffect;
+class QGraphicsOpacityEffect;
 class QPropertyAnimation;
 class QResizeEvent;
 /**
@@ -47,9 +49,7 @@ public:
     // 应用主题：themeIndex 为 Theme::availableThemes() 中的索引
     void applyTheme(int themeIndex);
 
-    // ==========================================
     // 对外暴露的被动渲染接口 (供 AppController 调用).
-    // ==========================================
 
     /**
      * @brief 刷新左侧的牌组列表
@@ -95,6 +95,8 @@ public:
      */
     void showCardManagerDialog(const QString& deckName,
                                const std::vector<CardDisplayInfo>& cards);
+    void showDeckPreviewDialog(const QString& deckName,
+                               const std::vector<CardDisplayInfo>& cards);
 
     /**
      * @brief QML 直接调用的翻牌回调（通过 _reviewBridge context property）
@@ -112,6 +114,9 @@ public:
      * @brief 更新右下角的周复习趋势图表
      */
     void updateWeeklyChart(const std::vector<int>& data, const QStringList& labels);
+
+    void setTodayCheckInState(bool checkedIn);
+    void showCheckInSuccessToast();
 
     /**
      * @brief 根据“连续选择简单”的连胜张数刷新中央的“火热连胜”徽章。
@@ -138,6 +143,11 @@ private:
     void setupStreakBadge();
     // 把徽章重新摆到中央看板顶部居中（窗口尺寸或内容变化时调用）
     void repositionStreakBadge();
+    void setupCheckInToast();
+    void styleCheckInToast();
+    void repositionCheckInToast();
+    void repositionCheckInButton();
+    void normalizeActionButtonMetrics();
 
 signals:
     void themeModeChanged();
@@ -148,9 +158,12 @@ signals:
     void signal_requestResetDeck(const QString& deckName);
     void signal_appWillClose();
     void signal_requestCreateDeck(const QString& deckName);
+    void signal_requestCreateDeckFromCards(const QString& deckName,
+                                           const std::vector<CardDisplayInfo>& cards);
     void signal_requestDeleteDeck(const QString& deckName);
     void signal_requestAddCard(const QString& deckName, const QString& front, const QString& back);
     void signal_requestManageCards(const QString& deckName);
+    void signal_requestPreviewDeck(const QString& deckName);
     void signal_requestDeleteCard(const QString& deckName, const QString& cardId);
     void signal_requestUpdateCard(const QString& deckName, const QString& cardId,
                                   const QString& newFront, const QString& newBack);
@@ -162,6 +175,8 @@ signals:
      * @param month 月份
      */
     void signal_requestCalendarData(int year, int month, QMap<QDate, QStringList>& outData);
+    void signal_requestCheckInDates(int year, int month, QSet<QDate>& outDates);
+    void signal_requestCheckIn();
 
     /**
      * @brief 用户在日历看板上发起了强制调期请求
@@ -179,6 +194,10 @@ private slots:
 
     // 弹出偏好设置对话框的槽函数
     void showPreferencesDialog();
+    void showAiAssistantDialog();
+    void showAiImportDialog();
+    void showReviewReminderDialog();
+    void showDesktopPetDialog();
 
 protected:
     // 重写关闭事件，用于拦截右上角的红叉
@@ -190,7 +209,7 @@ protected:
 private:
     int m_themeIndex = 0; // 当前主题在 Theme::availableThemes() 中的索引（构造时由配置/默认值覆盖）
 
-    // ===== 左侧导航面板 =====
+    // Left navigation.
     QWidget *leftPanel{};
     QListWidget *deckListWidget{};
     QPushButton *addDeckBtn{};
@@ -199,8 +218,17 @@ private:
 
     // 打开日历看板的入口按钮
     QPushButton *calendarBtn{};
+    QPushButton *checkInBtn{};
+    QFrame *checkInToast{};
+    QLabel *checkInToastTitle{};
+    QLabel *checkInToastSubtitle{};
+    QLabel *checkInToastHint{};
+    QWidget *checkInToastIcon{};
+    QGraphicsOpacityEffect *checkInToastOpacity{};
+    QPropertyAnimation *checkInToastFade{};
+    QPropertyAnimation *checkInToastMove{};
 
-    // ===== 中央看板区 =====
+    // Center review panel.
     QWidget *centerPanel{};
     QQuickWidget *flashCardView{};
     QStackedWidget *buttonStack{};   // 问题态与答案态按钮区共占一块空间，消除切换跳动
@@ -208,12 +236,12 @@ private:
     QWidget    *feedbackRow{};       // 答案态：4 个评分按钮的容器
     QPushButton *feedbackBtns[4]{};  // 生疏、困难、良好、简单（在 feedbackRow 内）
 
-    // ===== “火热连胜”悬浮徽章（叠加在中央闪卡看板之上）=====
+    // Floating streak badge above the flash card.
     QLabel *streakBadge{};                       // 显示连胜文案与分档名称
     QGraphicsDropShadowEffect *streakGlow{};     // 徽章光晕，按档位换色
     QPropertyAnimation *streakPulse{};           // 连胜增长时的光晕脉冲动画
 
-    // ===== 右侧统计面板 =====
+    // Right-side statistics.
     QWidget *rightPanel{};
     QLabel *progressLabel{};
     QLabel *todayStudyLabel{};

@@ -1,9 +1,11 @@
-//
+﻿//
 // Created by Arian on 2026/5/25.
 //
 
 #include "appcontroller.h"
 #include "view/MainWindow.h"
+#include "view/DesktopPetWidget.h"
+#include "view/StyledDialogs.h"
 #include "deckcontroller.h"
 #include "reviewcontroller.h"
 #include "service/storagemanager.h"
@@ -11,45 +13,44 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QSettings>
 
 namespace MindPalace::Controller {
 
-// =========================================================================
-// 1. 构造与析构管理（生命周期控制）
-// =========================================================================
+// Lifecycle
 
 AppController::AppController(QObject *parent)
     : QObject(parent)
 {
-    qDebug() << "AppController: 正在初始化全局中枢管理器...";
+    qDebug() << "AppController: initializing...";
 
-    // 遵循严格的层级依赖顺序进行总装
+    // Controllers must exist before the view starts wiring signals to them.
     initializeControllers();
     initializeViews();
     setupGlobalConnections();
 
-    qDebug() << "AppController: 全局系统总装完成，等待点火启动。";
+    qDebug() << "AppController: ready.";
 }
 
 /**
- * @brief 极其关键的工程细节：
- * 因为我们在头文件中对 MainWindow、DeckController 等类使用了高级前置声明（Forward Declaration），
- * 编译器在解析头文件时并不知道这些类的具体大小和析构方式。
- * 如果将析构函数隐式留给编译器生成（在头文件中 inline），在使用 std::unique_ptr 时会直接引发编译期报错。
- * 显式在源文件中定义默认析构函数，能确保编译器在看到完整的类定义后，安全、正确地生成智能指针的隐式销毁代码，彻底杜绝内存泄漏。
+ * Keep the destructor out-of-line because this class owns unique_ptrs to
+ * forward-declared types.
  */
 AppController::~AppController() = default;
 
 void AppController::start() {
-    qDebug() << "AppController: 系统点火，正在调出程序主窗口...";
+    qDebug() << "AppController: showing main window...";
+    DesktopPet::ensureRunningIfEnabled();
     if (m_mainWindow) {
-        m_mainWindow->show(); // 唤醒物理视图，正式将控制权移交给 Qt 事件循环
+        m_mainWindow->show();
     }
 }
 
-// =========================================================================
-// 2. 模块初始化流水线
-// =========================================================================
+bool AppController::showStartupReviewReminder() {
+    return maybeShowReviewReminder(nullptr);
+}
+
+// Startup wiring
 
 void AppController::initializeControllers() {
     // 优先用可执行文件所在目录（部署和 IDE 运行均适用）；
@@ -69,25 +70,17 @@ void AppController::initializeViews() {
     m_mainWindow = std::make_unique<MainWindow>();
 }
 
-// =========================================================================
-// 3. 全局神经枢纽：信号与槽的缝合
-// =========================================================================
+// Signal wiring
 void AppController::setupGlobalConnections() {
     if (!m_mainWindow || !m_deckController || !m_reviewController) return;
 
-    // ---------------------------------------------------------------------
-    // 链接 A：路由 View 层抛出的顶层用户动作（View -> AppController）
-    // ---------------------------------------------------------------------
-
-    // 当用户在主界面的牌组卡片上点击"进入学习"时，路由到总控的 handleStartReview 槽函数
+    // View -> controller routes.
     connect(m_mainWindow.get(), &MainWindow::signal_requestStartReview,
             this, &AppController::handleStartReview);
 
-    // 当用户在沉浸式复习窗口中按下 1-4 快捷键或点击评分按钮时，路由到总控的 handleSubmitFeedback 槽函数
     connect(m_mainWindow.get(), &MainWindow::signal_requestSubmitFeedback,
             this, &AppController::handleSubmitFeedback);
 
-    // 当用户点击主窗口的红叉准备关闭软件时，路由到总控的 handleAppQuit 槽函数执行兜底安全落盘
     connect(m_mainWindow.get(), &MainWindow::signal_appWillClose,
             this, &AppController::handleAppQuit);
 
@@ -147,15 +140,14 @@ void AppController::setupGlobalConnections() {
 
     // 初始化时立即填充一次牌组列表
     refreshDeckList();
+    m_mainWindow->setTodayCheckInState(Service::StorageManager::isTodaySignedIn());
 
-    // ---------------------------------------------------------------------
-    // 链接 B：牌组管理动作路由
-    // ---------------------------------------------------------------------
+    // Deck management actions.
 
     // 当用户在主界面输入新牌组名称并点击确认时，路由到 DeckController 执行底层创建逻辑
     connect(m_mainWindow.get(), &MainWindow::signal_requestCreateDeck,
             this, [this](const QString& deckName) {
-                qDebug() << "AppController 业务触发: 用户请求新建牌组 ->" << deckName;
+                qDebug() << "AppController request: create deck ->" << deckName;
 
                 // 驱动底层模型去执行真正的磁盘写入和排重逻辑
                 bool success = m_deckController->createDeck(deckName);
@@ -167,6 +159,27 @@ void AppController::setupGlobalConnections() {
                 } else {
                     qWarning() << "AppController 异常拦截: 牌组创建失败 (可能因重名或非法字符) ->" << deckName;
                 }
+            });
+
+    connect(m_mainWindow.get(), &MainWindow::signal_requestCreateDeckFromCards,
+            this, [this](const QString& deckName, const std::vector<CardDisplayInfo>& cards) {
+                std::vector<std::pair<QString, QString>> cardPairs;
+                cardPairs.reserve(cards.size());
+                for (const CardDisplayInfo& card : cards) {
+                    cardPairs.emplace_back(card.front, card.back);
+                }
+
+                if (!m_deckController->createDeckFromCards(deckName, cardPairs)) {
+                    StyledDialogs::info(m_mainWindow.get(),
+                                        QStringLiteral("创建失败"),
+                                        QStringLiteral("无法创建牌组，请检查名称是否重复，且卡片正反面不能为空。"));
+                    return;
+                }
+
+                StyledDialogs::info(m_mainWindow.get(),
+                                    QStringLiteral("创建成功"),
+                                    QStringLiteral("AI 牌组已创建，可以开始学习了。"));
+                handleStartReview(deckName);
             });
 
     // 当用户在微型表单弹窗中点击确认时，路由到底层执行添加逻辑
@@ -189,6 +202,20 @@ void AppController::setupGlobalConnections() {
                     break;
                 }
                 m_mainWindow->showCardManagerDialog(deckName, cards);
+            });
+
+    connect(m_mainWindow.get(), &MainWindow::signal_requestPreviewDeck,
+            this, [this](const QString& deckName) {
+                std::vector<CardDisplayInfo> cards;
+                for (const auto& deck : m_deckController->getDecks()) {
+                    if (deck.deckName != deckName) continue;
+                    for (const auto& cardPtr : deck.cards) {
+                        if (cardPtr)
+                            cards.push_back({cardPtr->id, cardPtr->front, cardPtr->back});
+                    }
+                    break;
+                }
+                m_mainWindow->showDeckPreviewDialog(deckName, cards);
             });
 
     // 删除单张卡片：先终止当前复习会话，否则 reviewQueue 中的裸指针会悬空
@@ -232,6 +259,20 @@ void AppController::setupGlobalConnections() {
                 outData = getCalendarData(year, month);
             }, Qt::DirectConnection);
 
+    connect(m_mainWindow.get(), &MainWindow::signal_requestCheckInDates,
+            this, [](int year, int month, QSet<QDate>& outDates) {
+                outDates = Service::StorageManager::getMonthlyCheckInDates(year, month);
+            }, Qt::DirectConnection);
+
+    connect(m_mainWindow.get(), &MainWindow::signal_requestCheckIn,
+            this, [this]() {
+                const bool signedInNow = Service::StorageManager::markTodaySignedIn();
+                m_mainWindow->setTodayCheckInState(true);
+                if (signedInNow) {
+                    m_mainWindow->showCheckInSuccessToast();
+                }
+            });
+
     // 路由 2：修改硬盘计划
     connect(m_mainWindow.get(), &MainWindow::signal_requestUpdateSchedule,
             this, &AppController::handleUpdateDeckSchedule);
@@ -245,12 +286,56 @@ void AppController::refreshDeckList() {
     m_mainWindow->updateDeckListView(names);
 }
 
-// =========================================================================
-// 4. 核心顶级业务路由逻辑实现
-// =========================================================================
+bool AppController::maybeShowReviewReminder(QWidget* parentForDialog) {
+    if (!m_deckController) return false;
+
+    QSettings settings("MindPalace", "Settings");
+    if (!settings.value("reviewReminderEnabled", false).toBool()) {
+        return false;
+    }
+
+    const QDate today = QDate::currentDate();
+    const QString todayKey = today.toString("yyyy-MM-dd");
+    if (settings.value("lastReviewReminderDate").toString() == todayKey) {
+        return false;
+    }
+
+    QStringList deckLines;
+    int totalCards = 0;
+
+    for (const auto& deck : m_deckController->getDecks()) {
+        const int manualStatus = deck.manualSchedule.value(todayKey, 0);
+        if (manualStatus == -1) {
+            continue;
+        }
+
+        const int dueCount = manualStatus == 1
+                ? static_cast<int>(deck.cards.size())
+                : deck.getDueCount();
+        if (dueCount <= 0) {
+            continue;
+        }
+
+        totalCards += dueCount;
+        deckLines << tr("%1：%2 张").arg(deck.deckName).arg(dueCount);
+    }
+
+    if (totalCards <= 0) {
+        return false;
+    }
+
+    const QString message = tr("今天需要复习以下牌组：\n\n%1\n\n共 %2 张卡片。")
+            .arg(deckLines.join('\n'))
+            .arg(totalCards);
+    StyledDialogs::info(parentForDialog, tr("复习提醒"), message);
+    settings.setValue("lastReviewReminderDate", todayKey);
+    return true;
+}
+
+// Review flow
 
 void AppController::handleStartReview(const QString& deckName) {
-    qDebug() << "AppController 业务触发: 用户请求进入牌组学习 ->" << deckName;
+    qDebug() << "AppController request: start review ->" << deckName;
 
     // 记录当前正在复习的牌组名称
     m_currentReviewingDeckName = deckName;
@@ -258,11 +343,9 @@ void AppController::handleStartReview(const QString& deckName) {
     auto stats = m_deckController->getDeckStats(deckName);
     m_mainWindow->updateSummaryStats(stats.totalCards, stats.masteryRate, stats.totalReviews);
 
-    // 1. 跨模块检索目标牌组对象
+    // Look up the mutable deck used by the review session.
     Model::Deck* targetDeck = nullptr;
 
-    // 架构安全规范：因为 ReviewController 状态机在流转时会直接改写卡片的算法参数，
-    // 我们在此处遍历牌组列表，获取底层非 const 的牌组裸指针
     for (const auto& deck : m_deckController->getDecks()) {
         if (deck.deckName == deckName) {
             targetDeck = const_cast<Model::Deck*>(&deck);
@@ -279,24 +362,22 @@ void AppController::handleStartReview(const QString& deckName) {
     // 这样关闭并重新打开应用后，进度条不会被错误地清零重算。
     m_todayReviewedBaseline = targetDeck->getReviewedTodayCount();
 
-    // 软覆盖拦截：判断今天是否为该牌组的“强制休假日”
-    // ==========================================
+    // A manual rest day wins over the normal review schedule.
     QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
     if (targetDeck->manualSchedule.contains(todayStr)) {
         int todayPlan = targetDeck->manualSchedule.value(todayStr);
         if (todayPlan == -1) {
-            qDebug() << "AppController 软拦截: 用户已为" << deckName << "安排了休假。直接放行！";
-            // 伪造一个复习完成的假象，给予用户强烈的正反馈
+            qDebug() << "AppController: rest day for" << deckName;
             m_mainWindow->showFinishedSummaryPage();
             m_mainWindow->updateProgressView(m_todayReviewedBaseline, m_todayReviewedBaseline);
-            return; // 核心：直接 return，阻止 ReviewController 启动！
+            return;
         }
     }
 
     // 文件路径从已解析的目录构建，与 initializeControllers 保持一致
     QString targetFilePath = QDir(m_decksDirPath).filePath(targetDeck->deckId + ".json");
 
-    // 3. 为复习状态机注入数据源并宣告开启复习轮询.
+    // Start the review queue for due cards.
     bool hasDueCards = m_reviewController->startReview(targetDeck, targetFilePath);
 
     if (hasDueCards) {
@@ -312,33 +393,28 @@ void AppController::handleStartReview(const QString& deckName) {
 }
 
 void AppController::handleSubmitFeedback(int quality) {
-    // 安全防御：只有当前状态机确实停留在[答案态]（即用户看过了背面）时，评分才具备法定效力
+    // Scores are only accepted after the answer side has been shown.
     if (m_reviewController->currentState() != ReviewController::ReviewState::AnswerState) {
         qWarning() << "AppController 安全拦截: 当前卡片未处于答案态，评分按钮拒绝响应。";
         return;
     }
 
-    // 优雅地将界面的普通整型按钮数据，安全地转换为 ReviewController 内部定义的强类型算法枚举
+    // UI buttons use integer scores; the review controller keeps the typed enum.
     auto feedbackEnum = static_cast<ReviewController::ReviewFeedback>(quality);
 
-    qDebug() << "AppController 业务触发: 正在路由用户记忆分值 ->" << quality;
+    qDebug() << "AppController request: submit feedback ->" << quality;
 
-    // 4. 将评分结果推入状态机：
-    // 状态机内部会立刻调度 SM2Engine 计算全新的间隔天数，并在其内部调用 StorageManager 执行高安全的"临时文件双缓冲原子写入"
+    // submitFeedback updates SM-2 fields and writes the deck back to disk.
     bool saveResult = m_reviewController->submitFeedback(feedbackEnum);
 
     if (!saveResult) {
-        qCritical() << "AppController 核心灾难: 闪卡参数更新或本地 JSON 文件原子化落盘失败！状态已回滚。";
+        qCritical() << "AppController: failed to save review feedback; card state was rolled back.";
     }
 
-    // ==========================================
-    // 核心埋点：成功复习一张，打卡记录 +1
-    // ==========================================
+    // One successful feedback submission counts as one review for daily stats.
     Service::StorageManager::incrementDailyReviewCount();
 
-    // ==========================================
-    // 提取最新 7 天数据，驱动 UI 图表刷新
-    // ==========================================
+    // Refresh the seven-day chart after the daily counter changes.
     std::vector<int> chartData;
     QStringList chartLabels;
     Service::StorageManager::getWeeklyReviewData(chartData, chartLabels);
@@ -363,13 +439,9 @@ void AppController::handleResetDeck(const QString& deckName) {
 }
 
 void AppController::handleAppQuit() {
-    qDebug() << "AppController 系统收尾: 检测到软件窗口正在注销，启动全局守护流程...";
-
-    // 架构美学：由于我们的系统设计极其先进，在用户每回答完一张卡片时就执行了"静默即时原子保存"，
-    // 因此在程序关闭的瞬间，我们不需要手忙脚乱地去大规模覆写硬盘。
-    // 此处主要用于释放全局独占资源、强制刷清日志缓冲区、或优雅地通知异步 IO 线程池安全终止。
-
-    qDebug() << "AppController 全局清算: 确认所有牌组数据无损，允许 Qt 核心事件循环安全退出。";
+    // Deck changes are saved during each operation, so shutdown currently only
+    // needs to pass through cleanly.
+    qDebug() << "AppController: closing.";
 }
 QMap<QDate, QStringList> AppController::getCalendarData(int year, int month) {
     QMap<QDate, QStringList> calendarData;
@@ -377,7 +449,7 @@ QMap<QDate, QStringList> AppController::getCalendarData(int year, int month) {
     // 遍历所有牌组，计算该月每一天需要复习哪些牌组
     for (const auto& deck : m_deckController->getDecks()) {
 
-        // 步骤 1：先读取底层的自然算法到期日 (生物钟)
+        // First collect dates generated by the review algorithm.
         for (const auto& cardPtr : deck.cards) {
             if (cardPtr) {
                 QDate naturalDate = cardPtr->nextReviewDate;
@@ -390,17 +462,17 @@ QMap<QDate, QStringList> AppController::getCalendarData(int year, int month) {
             }
         }
 
-        // 步骤 2：覆盖层，应用用户的 manualSchedule 计划表
+        // Then apply manual calendar overrides.
         for (auto it = deck.manualSchedule.constBegin(); it != deck.manualSchedule.constEnd(); ++it) {
             QDate schedDate = QDate::fromString(it.key(), "yyyy-MM-dd");
             if (schedDate.year() == year && schedDate.month() == month) {
                 int status = it.value();
 
                 if (status == -1) {
-                    // 强制休假：无情地从当天的待复习列表中剔除该牌组
+                    // Rest day: remove this deck from the due list.
                     calendarData[schedDate].removeAll(deck.deckName);
                 } else if (status == 1) {
-                    // 强制复习：如果当天列表没有这个牌组，强行加上去
+                    // Forced review: include the deck even if no card is due naturally.
                     if (!calendarData[schedDate].contains(deck.deckName)) {
                         calendarData[schedDate].append(deck.deckName);
                     }
