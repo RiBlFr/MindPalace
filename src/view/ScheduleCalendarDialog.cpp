@@ -108,8 +108,7 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const
     painter->setFont(dayFont);
     painter->setPen(dayColor);
 
-    QRect numberRect = rect;
-    numberRect.setBottom(rect.top() + static_cast<int>(rect.height() * 0.6));
+    const QRect numberRect(rect.left(), rect.top() + 6, rect.width(), 26);
     painter->drawText(numberRect, Qt::AlignCenter, QString::number(date.day()));
 
     if (isCheckedIn && inCurrentMonth) {
@@ -121,7 +120,9 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, const
         const int badgeWidth = qMin(rect.width() - 14, m_darkMode ? 72 : 58);
         const int badgeHeight = 18;
         const int badgeX = rect.center().x() - badgeWidth / 2;
-        const int badgeY = rect.top() + static_cast<int>(rect.height() * 0.58);
+        const int preferredBadgeY = rect.top() + 42;
+        const int scheduleBadgeY = rect.bottom() - 19;
+        const int badgeY = qMin(preferredBadgeY, scheduleBadgeY - badgeHeight - 8);
         const QRect badgeRect(badgeX, badgeY, badgeWidth, badgeHeight);
 
         painter->setPen(m_darkMode ? QPen(QColor("#30f29b"), 1.0) : QPen(Qt::NoPen));

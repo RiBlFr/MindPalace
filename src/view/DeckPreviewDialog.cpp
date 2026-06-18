@@ -2,6 +2,7 @@
 
 #include "StyledDialogs.h"
 
+#include <QFile>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -204,7 +205,7 @@ private:
     bool m_showBack = false;
 };
 
-} // namespace
+} // 匿名命名空间
 
 DeckPreviewDialog::DeckPreviewDialog(const QString& deckName,
                                      const std::vector<CardDisplayInfo>& cards,
@@ -364,8 +365,7 @@ void DeckPreviewDialog::buildUi() {
 void DeckPreviewDialog::rebuildGrid() {
     if (!m_grid) return;
 
-    // Rebuild cards after add/edit/delete so the visual index, selection ring,
-    // and flip-card callbacks all stay in sync with m_cards.
+    // 增删改后重建卡片，确保视觉序号、选中环和回调都与 m_cards 同步。
     while (QLayoutItem* item = m_grid->takeAt(0)) {
         if (QWidget* widget = item->widget()) {
             widget->deleteLater();
@@ -456,8 +456,7 @@ void DeckPreviewDialog::deleteSelectedCard() {
 
 void DeckPreviewDialog::setSelectedIndex(int index) {
     m_selectedIndex = index;
-    // Only one card can be the edit/delete target at a time; the blue ring is
-    // deliberately separate from the flip state so selecting a card is cheap.
+    // 同一时间只允许一张卡片作为编辑或删除目标；选中环与翻转状态相互独立。
     for (int i = 0; i < static_cast<int>(m_cardWidgets.size()); ++i) {
         if (auto *card = dynamic_cast<PreviewFlipCard*>(m_cardWidgets[i])) {
             card->setSelected(i == m_selectedIndex);
@@ -469,178 +468,11 @@ void DeckPreviewDialog::setSelectedIndex(int index) {
 }
 
 void DeckPreviewDialog::applyPreviewStyle() {
-    if (m_darkMode) {
-        setStyleSheet(QStringLiteral(R"(
-            QDialog#deckPreviewDialog {
-                background-color: rgba(6, 16, 29, 246);
-                border: 1px solid #27b8f4;
-                border-radius: 14px;
-            }
-            QLabel#previewTitle {
-                color: #f4fbff;
-                font-size: 27px;
-                font-weight: 900;
-            }
-            QLabel#previewSubtitle, QLabel#previewHint {
-                color: #9fb3ca;
-                font-size: 15px;
-                font-weight: 600;
-            }
-            QLabel#previewChip {
-                color: #f2f8ff;
-                background-color: rgba(7, 17, 29, 190);
-                border: 1px solid rgba(104, 133, 166, 170);
-                border-radius: 6px;
-                padding: 0 14px;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QFrame#previewScrollShell {
-                background-color: rgba(7, 17, 29, 206);
-                border: 1px solid rgba(104, 133, 166, 155);
-                border-radius: 18px;
-            }
-            QScrollArea#previewScrollArea,
-            QWidget#previewGridHost {
-                background: transparent;
-                border: none;
-            }
-            QScrollBar:vertical {
-                background: rgba(255,255,255,28);
-                width: 11px;
-                margin: 0;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical {
-                background: #28aafa;
-                min-height: 86px;
-                border-radius: 5px;
-            }
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {
-                height: 0;
-                border: none;
-                background: transparent;
-            }
-            QPushButton#previewSecondary,
-            QPushButton#previewPrimary,
-            QPushButton#previewAdd,
-            QPushButton#previewDelete {
-                border-radius: 9px;
-                font-size: 17px;
-                font-weight: 900;
-            }
-            QPushButton#previewSecondary {
-                color: #f8fbff;
-                background-color: rgba(8, 18, 30, 210);
-                border: 1px solid rgba(166, 185, 209, 190);
-            }
-            QPushButton#previewAdd {
-                color: #78f269;
-                background-color: rgba(8, 18, 30, 210);
-                border: 1px solid #78f269;
-            }
-            QPushButton#previewDelete {
-                color: #ff5a5f;
-                background-color: rgba(8, 18, 30, 210);
-                border: 1px solid #ff5a5f;
-            }
-            QPushButton#previewDelete:disabled {
-                color: rgba(255, 90, 95, 95);
-                border-color: rgba(255, 90, 95, 95);
-            }
-            QPushButton#previewPrimary {
-                color: #ffffff;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                                            stop:0 #0c4f9d, stop:1 #0f75cf);
-                border: 1px solid #2c9cff;
-            }
-        )"));
-    } else {
-        setStyleSheet(QStringLiteral(R"(
-            QDialog#deckPreviewDialog {
-                background-color: rgba(255, 255, 255, 248);
-                border: 1px solid #e3e8ef;
-                border-radius: 14px;
-            }
-            QLabel#previewTitle {
-                color: #1b2b43;
-                font-size: 27px;
-                font-weight: 900;
-            }
-            QLabel#previewSubtitle, QLabel#previewHint {
-                color: #65758c;
-                font-size: 15px;
-                font-weight: 600;
-            }
-            QLabel#previewChip {
-                color: #1b2b43;
-                background-color: #f8fafc;
-                border: 1px solid #d7dde5;
-                border-radius: 6px;
-                padding: 0 14px;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QFrame#previewScrollShell {
-                background-color: #ffffff;
-                border: 1px solid #d9e0e8;
-                border-radius: 18px;
-            }
-            QScrollArea#previewScrollArea,
-            QWidget#previewGridHost {
-                background: transparent;
-                border: none;
-            }
-            QScrollBar:vertical {
-                background: transparent;
-                width: 11px;
-                margin: 0;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical {
-                background: #888888;
-                min-height: 86px;
-                border-radius: 5px;
-            }
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {
-                height: 0;
-                border: none;
-                background: transparent;
-            }
-            QPushButton#previewSecondary,
-            QPushButton#previewPrimary,
-            QPushButton#previewAdd,
-            QPushButton#previewDelete {
-                border-radius: 9px;
-                font-size: 17px;
-                font-weight: 900;
-            }
-            QPushButton#previewSecondary {
-                color: #111827;
-                background-color: #ffffff;
-                border: 1px solid #d7dde5;
-            }
-            QPushButton#previewAdd {
-                color: #16a34a;
-                background-color: #ffffff;
-                border: 1px solid #22c55e;
-            }
-            QPushButton#previewDelete {
-                color: #ef4444;
-                background-color: #ffffff;
-                border: 1px solid #ef4444;
-            }
-            QPushButton#previewDelete:disabled {
-                color: #fca5a5;
-                border-color: #fca5a5;
-            }
-            QPushButton#previewPrimary {
-                color: #ffffff;
-                background-color: #5688b8;
-                border: 1px solid #5688b8;
-            }
-        )"));
+    const QString qssPath = m_darkMode
+            ? QStringLiteral(":/styles/DeckPreviewDialog_dark.qss")
+            : QStringLiteral(":/styles/DeckPreviewDialog_classic.qss");
+    QFile qssFile(qssPath);
+    if (qssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        setStyleSheet(QString::fromUtf8(qssFile.readAll()));
     }
 }

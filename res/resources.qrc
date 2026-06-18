@@ -7,6 +7,8 @@
         <file>styles/theme_aurora.qss</file>
 
         <file>styles/CardManagerDialog.qss</file>
+        <file>styles/DeckPreviewDialog_classic.qss</file>
+        <file>styles/DeckPreviewDialog_dark.qss</file>
         <file>styles/SimpleDialog.qss</file>
         <file>styles/Calendar.qss</file>
 

@@ -57,16 +57,16 @@ void removeNativeWindowFrame(QWidget *widget) {
     if (!widget) return;
 
     const HWND hwnd = reinterpret_cast<HWND>(widget->winId());
-    const int disabledNcRendering = 2; // DWMNCRP_DISABLED
+    const int disabledNcRendering = 2; // 禁用非客户区渲染
     DwmSetWindowAttribute(hwnd, 2, &disabledNcRendering, sizeof(disabledNcRendering));
 
-    const int noCorners = 1; // DWMWCP_DONOTROUND
+    const int noCorners = 1; // 禁用系统圆角
     DwmSetWindowAttribute(hwnd, 33, &noCorners, sizeof(noCorners));
 }
 #else
 void removeNativeWindowFrame(QWidget*) {}
 #endif
-} // namespace
+} // 匿名命名空间
 
 namespace MindPalace::DesktopPet {
 
@@ -74,6 +74,20 @@ bool isEnabled() {
     return QSettings("MindPalace", "Settings")
             .value("desktopPetEnabled", false)
             .toBool();
+}
+
+QString mainWindowLockPath() {
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+    return QDir(dir).filePath(QStringLiteral("MindPalaceMainWindow.lock"));
+}
+
+bool isMainWindowRunning() {
+    QLockFile lock(mainWindowLockPath());
+    if (lock.tryLock(0)) {
+        lock.unlock();
+        return false;
+    }
+    return true;
 }
 
 void syncStartup(bool enabled) {
@@ -127,7 +141,7 @@ int runDesktopPetMode() {
     return QApplication::exec();
 }
 
-} // namespace MindPalace::DesktopPet
+} // 命名空间 MindPalace::DesktopPet
 
 DesktopPetWidget::DesktopPetWidget(QWidget *parent)
         : QWidget(parent),
@@ -215,7 +229,7 @@ void DesktopPetWidget::mouseMoveEvent(QMouseEvent *event) {
 void DesktopPetWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         m_dragging = false;
-        if (!m_movedDuringPress) {
+        if (!m_movedDuringPress && !MindPalace::DesktopPet::isMainWindowRunning()) {
             QProcess::startDetached(QCoreApplication::applicationFilePath(), QStringList{});
         }
         event->accept();

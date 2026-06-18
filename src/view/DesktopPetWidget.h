@@ -1,18 +1,21 @@
 #ifndef DESKTOPPETWIDGET_H
 #define DESKTOPPETWIDGET_H
 
+#include <QString>
 #include <QWidget>
 
 namespace MindPalace::DesktopPet {
 
 bool isEnabled();
+QString mainWindowLockPath();
+bool isMainWindowRunning();
 void setEnabled(bool enabled);
 void syncStartup(bool enabled);
 void startProcess();
 void ensureRunningIfEnabled();
 int runDesktopPetMode();
 
-} // namespace MindPalace::DesktopPet
+} // 命名空间 MindPalace::DesktopPet
 
 class DesktopPetWidget final : public QWidget {
 public:
@@ -42,4 +45,4 @@ private:
     bool m_movedDuringPress = false;
 };
 
-#endif // DESKTOPPETWIDGET_H
+#endif

@@ -147,6 +147,7 @@ private:
     void styleCheckInToast();
     void repositionCheckInToast();
     void repositionCheckInButton();
+    void normalizeActionButtonMetrics();
 
 signals:
     void themeModeChanged();

@@ -30,6 +30,7 @@
 #include <QUrl>
 #include <QMetaObject>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QDialog>
 #include <QDir>
 #include <QRadioButton>
@@ -125,7 +126,7 @@ void applyWindowFrame(QWidget *widget, bool dark) {
 void applyWindowFrame(QWidget*, bool) {}
 #endif
 
-void syncReviewReminderStartup(bool enabled) {
+bool syncReviewReminderStartup(bool enabled) {
 #ifdef Q_OS_WIN
     QSettings runKey(
             "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
@@ -136,8 +137,11 @@ void syncReviewReminderStartup(bool enabled) {
     } else {
         runKey.remove("MindPalace");
     }
+    runKey.sync();
+    return runKey.status() == QSettings::NoError;
 #else
     Q_UNUSED(enabled);
+    return true;
 #endif
 }
 
@@ -466,7 +470,6 @@ void MainWindow::setupLeftPanel() {
 
     addDeckBtn = new QPushButton(tr("+ 新增卡组"));
     addDeckBtn->setObjectName("btnAddDeck");
-    addDeckBtn->setMinimumHeight(40);
     setButtonFont(addDeckBtn, 11);
     leftLayout->addWidget(addDeckBtn);
 
@@ -474,23 +477,22 @@ void MainWindow::setupLeftPanel() {
 
     calendarBtn = new QPushButton(tr("📅 复习日历"));
     calendarBtn->setObjectName("btnCalendar");
-    calendarBtn->setMinimumHeight(44);
     setButtonFont(calendarBtn, 12);
     leftLayout->addWidget(calendarBtn);
 
     deleteDeckBtn = new QPushButton(tr("删除卡组"));
     deleteDeckBtn->setObjectName("btnDeleteDeck");
-    deleteDeckBtn->setMinimumHeight(40);
     setButtonFont(deleteDeckBtn, 11);
     deleteDeckBtn->setEnabled(false);
     leftLayout->addWidget(deleteDeckBtn);
 
     resetDeckBtn = new QPushButton(tr("重置卡组进度"));
     resetDeckBtn->setObjectName("btnResetDeck");
-    resetDeckBtn->setMinimumHeight(40);
     setButtonFont(resetDeckBtn, 11);
     resetDeckBtn->setEnabled(false);
     leftLayout->addWidget(resetDeckBtn);
+
+    normalizeActionButtonMetrics();
 
     connect(addDeckBtn, &QPushButton::clicked, this, [this]() {
         auto name = StyledDialogs::getText(this, tr("新建卡组"), tr("请输入新卡组的名称"), tr("如：英语单词 / 高数公式"));
@@ -529,7 +531,6 @@ void MainWindow::setupCenterPanel() {
 
     showAnswerBtn = new QPushButton(tr("显示答案  （空格键）"));
     showAnswerBtn->setObjectName("btnShowAnswer");
-    showAnswerBtn->setMinimumHeight(62);
     setButtonFont(showAnswerBtn, 13);
 
     feedbackRow = setupFeedbackButtons();
@@ -539,6 +540,7 @@ void MainWindow::setupCenterPanel() {
     buttonStack->addWidget(feedbackRow);
     buttonStack->hide();
     centerLayout->addWidget(buttonStack);
+    normalizeActionButtonMetrics();
 
     // 悬浮徽章必须最后创建：它不进布局，而是叠加在闪卡看板之上
     setupStreakBadge();
@@ -685,7 +687,7 @@ void MainWindow::showCheckInSuccessToast() {
     checkInToastMove->setEndValue(endGeometry);
     checkInToastMove->start();
 
-    QTimer::singleShot(670, this, [this, endGeometry]() {
+    QTimer::singleShot(1000, this, [this, endGeometry]() {
         if (!checkInToast || !checkInToast->isVisible()) return;
         checkInToastFade->stop();
         checkInToastMove->stop();
@@ -743,7 +745,6 @@ QWidget* MainWindow::setupFeedbackButtons() {
     for (int i = 0; i < 4; ++i) {
         feedbackBtns[i] = new QPushButton(feedbackTexts[i]);
         feedbackBtns[i]->setObjectName(objNames[i]);
-        feedbackBtns[i]->setMinimumHeight(64);
         setButtonFont(feedbackBtns[i], 12);
         layout->addWidget(feedbackBtns[i]);
     }
@@ -888,6 +889,43 @@ void MainWindow::setTodayCheckInState(bool checkedIn) {
     checkInBtn->style()->polish(checkInBtn);
     checkInBtn->update();
     repositionCheckInButton();
+}
+
+void MainWindow::normalizeActionButtonMetrics() {
+    auto pinHeight = [](QPushButton *button, int height) {
+        if (!button) return;
+        button->setMinimumHeight(height);
+        button->setMaximumHeight(height);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        button->updateGeometry();
+    };
+
+    pinHeight(addDeckBtn, 56);
+    pinHeight(calendarBtn, 60);
+    pinHeight(deleteDeckBtn, 56);
+    pinHeight(resetDeckBtn, 56);
+    pinHeight(showAnswerBtn, 62);
+
+    for (auto *button : feedbackBtns) {
+        pinHeight(button, 64);
+    }
+
+    if (feedbackRow) {
+        feedbackRow->setMinimumHeight(64);
+        feedbackRow->setMaximumHeight(64);
+        feedbackRow->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        feedbackRow->updateGeometry();
+    }
+    if (buttonStack) {
+        buttonStack->setMinimumHeight(64);
+        buttonStack->setMaximumHeight(64);
+        buttonStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        buttonStack->updateGeometry();
+    }
+    if (checkInBtn) {
+        checkInBtn->setFixedSize(96, 32);
+        checkInBtn->updateGeometry();
+    }
 }
 
 namespace {
@@ -1293,8 +1331,14 @@ void MainWindow::showReviewReminderDialog() {
 
     if (dialog.exec() == QDialog::Accepted) {
         const bool enabled = enabledCheck->isChecked();
-        settings.setValue("reviewReminderEnabled", enabled);
-        syncReviewReminderStartup(enabled);
+        if (syncReviewReminderStartup(enabled)) {
+            settings.setValue("reviewReminderEnabled", enabled);
+        } else {
+            StyledDialogs::info(
+                    this,
+                    tr("复习提醒"),
+                    tr("无法更新 Windows 登录启动项，请检查系统权限或安全软件拦截。"));
+        }
     }
 }
 
@@ -1361,6 +1405,7 @@ void MainWindow::applyTheme(int themeIndex) {
 
     // 1. 加载对应的 QSS
     setupStyles();
+    normalizeActionButtonMetrics();
     styleCheckInToast();
     if (checkInBtn) {
         menuBar()->setMinimumHeight(checkInBtn->height() + 8);
